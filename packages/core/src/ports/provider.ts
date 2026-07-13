@@ -7,7 +7,6 @@ export interface ProviderCapabilities {
   supports: {
     metadata: boolean;
     subtitles: boolean;
-    mediaDownload: boolean;
     comments: boolean;
     channelListing: boolean;
   };
@@ -22,7 +21,7 @@ export interface ContentMetadata {
   publishedAt?: string;
   channelName?: string;
   language?: string;
-  /** Métricas de engagement, cuando el provider las tiene a mano (no requiere llamado extra). */
+  /** Engagement metrics, when the provider has them at hand (no extra call needed). */
   viewCount?: number;
   likeCount?: number;
   commentCount?: number;
@@ -38,7 +37,7 @@ export interface TranscriptSegment {
 export interface TextPayload {
   text: string;
   segments?: TranscriptSegment[];
-  source: "subtitles_manual" | "subtitles_auto" | "whisper" | "native_text";
+  source: "subtitles_manual" | "subtitles_auto" | "native_text";
   language?: string;
 }
 
@@ -48,13 +47,11 @@ export interface ContentProvider {
   classify(url: string): ContentKind;
   capabilities(): ProviderCapabilities;
   fetchMetadata(url: string): Promise<ContentMetadata>;
-  /** Subtítulos/texto nativo. null = no disponible → el pipeline decide transcribir. */
+  /** Native subtitles/text. null = not available. */
   fetchText(url: string): Promise<TextPayload | null>;
-  /** Descarga audio/video a un path local. null = no soportado. */
-  fetchMedia(url: string, destDir: string): Promise<string | null>;
-  /** Lista items de un canal/playlist (si el provider lo soporta). */
+  /** Lists items of a channel/playlist (if the provider supports it). */
   listItems?(url: string, strategy: "top" | "recent", n: number): Promise<ChannelItem[]>;
-  /** Comentarios públicos (si el provider lo soporta). */
+  /** Public comments (if the provider supports it). */
   fetchComments?(url: string, limit: number): Promise<SourceComment[]>;
 }
 
@@ -71,10 +68,10 @@ export interface ChannelItem {
   title: string;
   durationSec?: number;
   viewCount?: number;
-  /** Solo disponible vía YouTube Data API (YOUTUBE_API_KEY); yt-dlp no lo expone de forma confiable. */
+  /** Only available via the YouTube Data API (YOUTUBE_API_KEY); yt-dlp doesn't expose it reliably. */
   likeCount?: number;
   commentCount?: number;
   publishedAt?: string;
-  /** Tags que el creador le puso al video (SEO). Solo vía YouTube Data API. */
+  /** Tags the creator put on the video (SEO). Only via the YouTube Data API. */
   tags?: string[];
 }

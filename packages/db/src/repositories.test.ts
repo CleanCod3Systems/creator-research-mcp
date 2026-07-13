@@ -1,92 +1,14 @@
-import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { createDb } from "./client.js";
 import { runMigrations } from "./migrate.js";
-import {
-  AnalysisRepository,
-  HeartbeatRepository,
-  MetricsRepository,
-  ProfileRepository,
-  SqliteJobQueue,
-} from "./repositories.js";
-import { analyses, contentItems, jobs } from "./schema.js";
+import { MetricsRepository, ProfileRepository } from "./repositories.js";
+import { contentItems } from "./schema.js";
 
 function makeDb() {
   const db = createDb(":memory:");
   runMigrations(db);
   return db;
 }
-
-describe("SqliteJobQueue.recoverStale", () => {
-  it("staleMs=0 (boot): recupera TODOS los running, sin importar qué tan reciente es", async () => {
-    const db = makeDb();
-    const queue = new SqliteJobQueue(db);
-    const id = await queue.enqueue("analyze", { x: 1 });
-    await queue.claimNext(["analyze"]); // pasa a running
-
-    const recovered = queue.recoverStale();
-    expect(recovered).toBe(1);
-    expect((await queue.get(id))?.status).toBe("queued");
-  });
-
-  it("staleMs>0 (loop, worker vivo): NO toca un job que se actualizó hace instantes", async () => {
-    const db = makeDb();
-    const queue = new SqliteJobQueue(db);
-    await queue.enqueue("analyze", { x: 1 });
-    await queue.claimNext(["analyze"]);
-
-    const recovered = queue.recoverStale(15 * 60_000); // 15 min: el job tiene segundos de antigüedad
-    expect(recovered).toBe(0);
-  });
-
-  it("staleMs>0: SÍ recupera un job running cuyo updatedAt quedó viejo (colgado)", async () => {
-    const db = makeDb();
-    const queue = new SqliteJobQueue(db);
-    const id = await queue.enqueue("analyze", { x: 1 });
-    await queue.claimNext(["analyze"]);
-    const oldTs = new Date(Date.now() - 30 * 60_000).toISOString();
-    db.update(jobs).set({ updatedAt: oldTs }).where(eq(jobs.id, id)).run();
-
-    const recovered = queue.recoverStale(15 * 60_000);
-    expect(recovered).toBe(1);
-    expect((await queue.get(id))?.status).toBe("queued");
-  });
-});
-
-describe("AnalysisRepository.failStaleRunning", () => {
-  it("marca failed un análisis 'running' huérfano en vez de dejarlo colgado para siempre", () => {
-    const db = makeDb();
-    const repo = new AnalysisRepository(db);
-    const contentItemId = db
-      .insert(contentItems)
-      .values({ sourceType: "video", provider: "fake", contentHash: "h1", title: "t" })
-      .returning({ id: contentItems.id })
-      .get().id;
-    const analysisId = repo.create(contentItemId, "1", "quick");
-    db.update(analyses)
-      .set({ createdAt: new Date(Date.now() - 30 * 60_000).toISOString() })
-      .where(eq(analyses.id, analysisId))
-      .run();
-
-    const failed = repo.failStaleRunning(15 * 60_000, "huérfano");
-    expect(failed).toBe(1);
-    expect(repo.getById(analysisId)?.status).toBe("failed");
-  });
-});
-
-describe("HeartbeatRepository", () => {
-  it("touch + get reflejan el último worker vivo", () => {
-    const db = makeDb();
-    const hb = new HeartbeatRepository(db);
-    expect(hb.get()).toBeNull();
-    hb.touch(1234, "job-abc");
-    const row = hb.get();
-    expect(row?.pid).toBe(1234);
-    expect(row?.currentJobId).toBe("job-abc");
-    hb.touch(1234, null);
-    expect(hb.get()?.currentJobId).toBeNull();
-  });
-});
 
 describe("MetricsRepository", () => {
   function makeContentItem(db: ReturnType<typeof makeDb>) {
@@ -97,7 +19,7 @@ describe("MetricsRepository", () => {
       .get().id;
   }
 
-  it("recordSnapshot + getSnapshots: guarda y devuelve en orden cronológico", () => {
+  it("recordSnapshot + getSnapshots: stores and returns them in chronological order", () => {
     const db = makeDb();
     const repo = new MetricsRepository(db);
     const contentItemId = makeContentItem(db);
@@ -116,7 +38,7 @@ describe("MetricsRepository", () => {
     });
   });
 
-  it("no duplica un snapshot idéntico dentro de los 5 minutos", () => {
+  it("does not duplicate an identical snapshot within 5 minutes", () => {
     const db = makeDb();
     const repo = new MetricsRepository(db);
     const contentItemId = makeContentItem(db);
@@ -133,7 +55,7 @@ describe("MetricsRepository", () => {
     expect(repo.getSnapshots(contentItemId)).toHaveLength(1);
   });
 
-  it("SÍ guarda un nuevo snapshot si los valores cambiaron, aunque sea al instante", () => {
+  it("DOES save a new snapshot if the values changed, even instantly", () => {
     const db = makeDb();
     const repo = new MetricsRepository(db);
     const contentItemId = makeContentItem(db);
@@ -150,11 +72,11 @@ describe("MetricsRepository", () => {
     expect(repo.getSnapshots(contentItemId)).toHaveLength(2);
   });
 
-  it("import manual con fecha propia (observedAt): NUNCA se pisa por el dedup de 'ahora'", () => {
+  it("a manual import with its own date (observedAt) is NEVER overwritten by the 'now' dedup", () => {
     const db = makeDb();
     const repo = new MetricsRepository(db);
     const contentItemId = makeContentItem(db);
-    // dos snapshots manuales idénticos en valores pero de fechas históricas distintas: ambos se guardan
+    // two manual snapshots with identical values but different historical dates: both are saved
     repo.recordSnapshot(
       contentItemId,
       { viewCount: 100, likeCount: 10, commentCount: 1 },
@@ -175,7 +97,7 @@ describe("MetricsRepository", () => {
 });
 
 describe("ProfileRepository", () => {
-  it("upsertCreator: mismo platform+handle → actualiza en vez de duplicar", () => {
+  it("upsertCreator: same platform+handle updates instead of duplicating", () => {
     const db = makeDb();
     const repo = new ProfileRepository(db);
     const id1 = repo.upsertCreator({

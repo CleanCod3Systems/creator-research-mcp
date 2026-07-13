@@ -68,16 +68,15 @@ export const transcripts = sqliteTable("transcripts", {
     .notNull()
     .references(() => contentItems.id),
   source: text("source", {
-    enum: ["subtitles_manual", "subtitles_auto", "whisper", "native_text"],
+    enum: ["subtitles_manual", "subtitles_auto", "native_text"],
   }).notNull(),
   language: text("language"),
   text: text("text").notNull(),
   segments: text("segments", { mode: "json" }),
-  whisperModel: text("whisper_model"),
   createdAt: createdAt(),
 });
 
-/** Medición puntual de vistas/likes/comments con timestamp — permite calcular deltas/velocidad. */
+/** Point-in-time views/likes/comments measurement with a timestamp — enables delta/velocity calculations. */
 export const metricSnapshots = sqliteTable(
   "metric_snapshots",
   {
@@ -174,37 +173,4 @@ export const roadmaps = sqliteTable("roadmaps", {
   graph: text("graph", { mode: "json" }).notNull(),
   rendered: text("rendered", { mode: "json" }),
   createdAt: createdAt(),
-});
-
-export const jobs = sqliteTable("jobs", {
-  id: text("id").primaryKey(),
-  type: text("type").notNull(),
-  payload: text("payload", { mode: "json" }).notNull(),
-  status: text("status", {
-    enum: ["queued", "running", "done", "failed", "failed_with_guidance"],
-  }).notNull(),
-  progress: text("progress", { mode: "json" }),
-  checkpoints: text("checkpoints", { mode: "json" }),
-  attempts: integer("attempts").notNull().default(0),
-  lastError: text("last_error"),
-  resultId: text("result_id"),
-  createdAt: createdAt(),
-  updatedAt: text("updated_at"),
-});
-
-/** Fila única (id=1): heartbeat del worker para healthcheck desde el servidor MCP. */
-export const workerHeartbeats = sqliteTable("worker_heartbeats", {
-  id: integer("id").primaryKey(),
-  pid: integer("pid").notNull(),
-  currentJobId: text("current_job_id"),
-  updatedAt: text("updated_at").notNull(),
-});
-
-export const cacheEntries = sqliteTable("cache_entries", {
-  key: text("key").primaryKey(),
-  analysisId: integer("analysis_id")
-    .notNull()
-    .references(() => analyses.id),
-  pipelineVersion: text("pipeline_version").notNull(),
-  expiresAt: text("expires_at").notNull(),
 });

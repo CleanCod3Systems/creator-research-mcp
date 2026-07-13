@@ -1,0 +1,1 @@
+ALTER TABLE `transcripts` DROP COLUMN `whisper_model`;

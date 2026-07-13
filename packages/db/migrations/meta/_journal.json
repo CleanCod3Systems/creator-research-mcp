@@ -29,6 +29,20 @@
       "when": 1783961233931,
       "tag": "0003_slow_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1783969704792,
+      "tag": "0004_jittery_joshua_kane",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1783970892055,
+      "tag": "0005_opposite_raider",
+      "breakpoints": true
     }
   ]
 }

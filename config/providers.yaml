@@ -1,28 +1,27 @@
 # reliability: stable | fragile | manual_only
-# Los providers fragile funcionan best-effort: pueden romperse si la plataforma cambia.
+# Fragile providers work best-effort: they can break if the platform changes.
 providers:
   youtube: { enabled: true, reliability: stable }
-  vimeo: { enabled: true, reliability: stable }
   web: { enabled: true, reliability: stable }
   pdf: { enabled: true, reliability: stable }
   localfile: { enabled: true, reliability: stable }
   tiktok:
-    { enabled: true, reliability: fragile, notes: "yt-dlp best-effort; puede romperse sin aviso" }
+    { enabled: true, reliability: fragile, notes: "yt-dlp best-effort; can break without notice" }
   instagram:
     {
       enabled: true,
       reliability: fragile,
-      notes: 'Contenido con login requiere cookies (YTDLP_EXTRA_ARGS="--cookies-from-browser chrome")',
+      notes: 'Content behind login requires cookies (YTDLP_EXTRA_ARGS="--cookies-from-browser chrome")',
     }
   twitter:
     {
       enabled: true,
       reliability: fragile,
-      notes: "Texto vía FxTwitter + video vía yt-dlp; solo tweets públicos",
+      notes: "Text via FxTwitter + video via yt-dlp; public tweets only",
     }
   linkedin:
     {
       enabled: true,
       reliability: fragile,
-      notes: "Solo posts/artículos públicos; con authwall usar analyze con filePath",
+      notes: "Public posts/articles only; behind the login wall, use analyze with filePath",
     }

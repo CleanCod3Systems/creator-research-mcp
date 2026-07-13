@@ -3,12 +3,3 @@ app:
   pipelineVersion: "1"
 storage:
   databasePath: ./data/creator-research.db
-  mediaDir: ./data/media
-  keepAudio: false
-cache:
-  analysisTtlDays: 7
-jobs:
-  maxConcurrent: 2
-  maxAttempts: 3
-limits:
-  maxVideoDurationMinutes: 120

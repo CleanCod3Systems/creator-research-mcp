@@ -1,33 +1,23 @@
-import type {
-  AnalysisDocument,
-  JobProgress,
-  JobQueue,
-  JobRecord,
-  JobStatus,
-} from "@creator-research/core";
-import { and, desc, eq, gt, like, lte, sql } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
+import type { AnalysisDocument } from "@creator-research/core";
+import { and, desc, eq, gt, like, sql } from "drizzle-orm";
 import type { DbClient } from "./client.js";
 import {
   analyses,
-  cacheEntries,
   comments,
   comparisons,
   contentItems,
   courses,
   creators,
   facets,
-  jobs,
   metricSnapshots,
   roadmaps,
   transcripts,
-  workerHeartbeats,
 } from "./schema.js";
 
 export class ContentRepository {
   constructor(private readonly db: DbClient) {}
 
-  /** Idempotente por contentHash: devuelve el existente o crea. */
+  /** Idempotent by contentHash: returns the existing row or creates one. */
   upsertContentItem(data: typeof contentItems.$inferInsert): number {
     const existing = this.db
       .select({ id: contentItems.id })
@@ -91,8 +81,8 @@ export class MetricsRepository {
   constructor(private readonly db: DbClient) {}
 
   /**
-   * Un snapshot por llamado, salvo que ya haya uno prácticamente idéntico en los últimos 5
-   * minutos (evita ruido si el LLM cliente pide lo mismo dos veces seguidas por error).
+   * One snapshot per call, unless one that's practically identical already exists in the last
+   * 5 minutes (avoids noise if the client LLM asks for the same thing twice in a row by mistake).
    */
   recordSnapshot(
     contentItemId: number,
@@ -100,8 +90,8 @@ export class MetricsRepository {
     source: string,
     observedAt = new Date().toISOString(),
   ): void {
-    // el dedup de "casi idéntico en los últimos 5 min" solo aplica a mediciones en vivo (ahora);
-    // un import manual con fecha propia siempre se guarda, es una medición de un momento distinto
+    // the "practically identical in the last 5 min" dedup only applies to live (now) measurements;
+    // a manual import with its own date is always saved, it's a measurement from a different moment
     const isLiveNow = Math.abs(Date.now() - new Date(observedAt).getTime()) < 60_000;
     if (isLiveNow) {
       const fiveMinAgo = new Date(Date.now() - 5 * 60_000).toISOString();
@@ -208,36 +198,6 @@ export class AnalysisRepository {
       })),
     );
     if (rows.length > 0) this.db.insert(facets).values(rows).run();
-  }
-
-  fail(analysisId: number, status: "failed" | "failed_with_guidance", error: string): void {
-    this.db
-      .update(analyses)
-      .set({ status, error, finishedAt: new Date().toISOString() })
-      .where(eq(analyses.id, analysisId))
-      .run();
-  }
-
-  /** Análisis "running" huérfanos: el worker murió/reinició antes de terminarlos. */
-  listStaleRunning(staleMs: number): { id: number; startedAt: string | null }[] {
-    const cutoff = new Date(Date.now() - staleMs).toISOString();
-    return this.db
-      .select({ id: analyses.id, startedAt: analyses.startedAt })
-      .from(analyses)
-      .where(and(eq(analyses.status, "running"), lte(analyses.createdAt, cutoff)))
-      .all();
-  }
-
-  /** Los marca failed con un motivo claro en vez de dejarlos running para siempre. */
-  failStaleRunning(staleMs: number, message: string): number {
-    const cutoff = new Date(Date.now() - staleMs).toISOString();
-    const rows = this.db
-      .update(analyses)
-      .set({ status: "failed", error: message, finishedAt: new Date().toISOString() })
-      .where(and(eq(analyses.status, "running"), lte(analyses.createdAt, cutoff)))
-      .returning({ id: analyses.id })
-      .all();
-    return rows.length;
   }
 
   getById(analysisId: number): {
@@ -360,7 +320,7 @@ export interface FacetSearchRow {
 export class SearchRepository {
   constructor(private readonly db: DbClient) {}
 
-  /** Busca en las facetas desnormalizadas: "¿quién enseña Astro?" en una query. */
+  /** Searches the denormalized facets: "who teaches Astro?" in a single query. */
   searchFacets(query: string, kind?: string, limit = 30): FacetSearchRow[] {
     const conditions = [
       like(sql`lower(${facets.value})`, `%${query.toLowerCase()}%`),
@@ -414,166 +374,7 @@ export class SearchRepository {
   }
 }
 
-export class CacheRepository {
-  constructor(private readonly db: DbClient) {}
-
-  getValid(key: string): number | null {
-    const row = this.db
-      .select({ analysisId: cacheEntries.analysisId })
-      .from(cacheEntries)
-      .where(and(eq(cacheEntries.key, key), gt(cacheEntries.expiresAt, new Date().toISOString())))
-      .get();
-    return row?.analysisId ?? null;
-  }
-
-  set(key: string, analysisId: number, pipelineVersion: string, ttlDays: number): void {
-    const expiresAt = new Date(Date.now() + ttlDays * 86_400_000).toISOString();
-    this.db
-      .insert(cacheEntries)
-      .values({ key, analysisId, pipelineVersion, expiresAt })
-      .onConflictDoUpdate({
-        target: cacheEntries.key,
-        set: { analysisId, pipelineVersion, expiresAt },
-      })
-      .run();
-  }
-}
-
-export class SqliteJobQueue implements JobQueue {
-  constructor(private readonly db: DbClient) {}
-
-  /**
-   * Jobs "running" cuya última actualización es más vieja que staleMs → re-encolados.
-   * staleMs=0 (default, uso al boot del worker): recupera TODOS los running, porque si el
-   * proceso está arrancando, cualquier "running" es de un worker anterior que ya no existe.
-   * Con staleMs>0 (uso periódico dentro del loop, worker vivo): solo recupera los realmente
-   * colgados (p.ej. un fetch sin timeout), sin tocar el job que se está procesando ahora mismo.
-   */
-  recoverStale(staleMs = 0): number {
-    const cutoff = new Date(Date.now() - staleMs).toISOString();
-    const rows = this.db
-      .update(jobs)
-      .set({ status: "queued", updatedAt: new Date().toISOString() })
-      .where(and(eq(jobs.status, "running"), lte(jobs.updatedAt, cutoff)))
-      .returning({ id: jobs.id })
-      .all();
-    return rows.length;
-  }
-
-  /** Conteo por estado, para healthcheck. */
-  counts(): Record<JobStatus, number> {
-    const rows = this.db
-      .select({ status: jobs.status, n: sql<number>`count(*)` })
-      .from(jobs)
-      .groupBy(jobs.status)
-      .all();
-    const base: Record<JobStatus, number> = {
-      queued: 0,
-      running: 0,
-      done: 0,
-      failed: 0,
-      failed_with_guidance: 0,
-    };
-    for (const r of rows) base[r.status] = r.n;
-    return base;
-  }
-
-  enqueue(type: string, payload: unknown): Promise<string> {
-    const id = randomUUID();
-    this.db
-      .insert(jobs)
-      .values({
-        id,
-        type,
-        payload,
-        status: "queued",
-        progress: { percent: 0 },
-        updatedAt: new Date().toISOString(),
-      })
-      .run();
-    return Promise.resolve(id);
-  }
-
-  get(jobId: string): Promise<JobRecord | null> {
-    const row = this.db.select().from(jobs).where(eq(jobs.id, jobId)).get();
-    if (!row) return Promise.resolve(null);
-    return Promise.resolve({
-      id: row.id,
-      type: row.type,
-      payload: row.payload,
-      status: row.status,
-      progress: (row.progress ?? { percent: 0 }) as JobProgress,
-      attempts: row.attempts,
-      lastError: row.lastError ?? undefined,
-      resultId: row.resultId ?? undefined,
-      createdAt: row.createdAt,
-    });
-  }
-
-  claimNext(types: string[]): Promise<JobRecord | null> {
-    // better-sqlite3 es síncrono: la transacción garantiza que un solo worker reclama el job
-    const claimed = this.db.transaction((tx) => {
-      const row = tx
-        .select()
-        .from(jobs)
-        .where(eq(jobs.status, "queued"))
-        .orderBy(jobs.createdAt)
-        .get();
-      if (!row || !types.includes(row.type)) return null;
-      tx.update(jobs)
-        .set({ status: "running", attempts: row.attempts + 1, updatedAt: new Date().toISOString() })
-        .where(eq(jobs.id, row.id))
-        .run();
-      return { ...row, status: "running" as const, attempts: row.attempts + 1 };
-    });
-    if (!claimed) return Promise.resolve(null);
-    return Promise.resolve({
-      id: claimed.id,
-      type: claimed.type,
-      payload: claimed.payload,
-      status: claimed.status,
-      progress: (claimed.progress ?? { percent: 0 }) as JobProgress,
-      attempts: claimed.attempts,
-      lastError: claimed.lastError ?? undefined,
-      resultId: claimed.resultId ?? undefined,
-      createdAt: claimed.createdAt,
-    });
-  }
-
-  update(
-    jobId: string,
-    patch: Partial<Pick<JobRecord, "status" | "progress" | "lastError" | "resultId">>,
-  ): Promise<void> {
-    this.db
-      .update(jobs)
-      .set({ ...patch, updatedAt: new Date().toISOString() })
-      .where(eq(jobs.id, jobId))
-      .run();
-    return Promise.resolve();
-  }
-}
-
-/** Heartbeat de fila única: le permite al servidor MCP saber si el worker está vivo. */
-export class HeartbeatRepository {
-  constructor(private readonly db: DbClient) {}
-
-  touch(pid: number, currentJobId: string | null): void {
-    this.db
-      .insert(workerHeartbeats)
-      .values({ id: 1, pid, currentJobId, updatedAt: new Date().toISOString() })
-      .onConflictDoUpdate({
-        target: workerHeartbeats.id,
-        set: { pid, currentJobId, updatedAt: new Date().toISOString() },
-      })
-      .run();
-  }
-
-  get(): { pid: number; currentJobId: string | null; updatedAt: string } | null {
-    return this.db.select().from(workerHeartbeats).where(eq(workerHeartbeats.id, 1)).get() ?? null;
-  }
-}
-
-/** Perfiles/creadores importados manualmente (ej. snapshot de Instagram sin API automática). */
+/** Manually imported profiles/creators (e.g. an Instagram snapshot with no automated API). */
 export class ProfileRepository {
   constructor(private readonly db: DbClient) {}
 

@@ -8,15 +8,12 @@ import {
 import type { ContentProvider } from "@creator-research/core";
 import {
   AnalysisRepository,
-  CacheRepository,
   CommentsRepository,
   ContentRepository,
   GenerationRepository,
-  HeartbeatRepository,
   MetricsRepository,
   ProfileRepository,
   SearchRepository,
-  SqliteJobQueue,
   createDb,
   runMigrations,
 } from "@creator-research/db";
@@ -34,11 +31,8 @@ import { dirname, isAbsolute, resolve } from "node:path";
 
 export interface AppContext {
   config: AppConfig;
-  queue: SqliteJobQueue;
   analysisRepo: AnalysisRepository;
-  cache: CacheRepository;
   content: ContentRepository;
-  heartbeat: HeartbeatRepository;
   providers: ContentProvider[];
 }
 
@@ -79,7 +73,7 @@ export function getProfileRepo(): ProfileRepository {
   return profileRepo;
 }
 
-/** Ensamblaje único de dependencias. Sin config/ en disco usa defaults embebidos (npx). */
+/** Single dependency assembly point. With no config/ directory on disk, uses embedded defaults (npx). */
 export function getContext(): AppContext {
   if (ctx) return ctx;
   const configPath = resolveConfigPathOrNull("default.yaml");
@@ -96,12 +90,9 @@ export function getContext(): AppContext {
   profileRepo = new ProfileRepository(db);
   ctx = {
     config,
-    queue: new SqliteJobQueue(db),
     analysisRepo: new AnalysisRepository(db),
-    cache: new CacheRepository(db),
     content: new ContentRepository(db),
-    heartbeat: new HeartbeatRepository(db),
-    // orden = prioridad de matching: específicos primero, web como catch-all http
+    // order = matching priority: specific providers first, web as the http catch-all
     providers: [
       new YouTubeProvider(),
       new TikTokProvider(),
