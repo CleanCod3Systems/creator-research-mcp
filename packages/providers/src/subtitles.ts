@@ -2,7 +2,7 @@ import type { TextPayload } from "@cleancod3/core";
 import { parseVtt, segmentsToText } from "./vtt.js";
 import type { YtDlpInfo } from "./ytdlp.js";
 
-/** Prioridad: subs manuales > auto-captions. Idioma: el del contenido > es > en > primero. */
+/** Priority: manual subs > auto-captions. Language: the content's own > es > en > first available. */
 export async function textFromInfo(info: YtDlpInfo): Promise<TextPayload | null> {
   for (const [tracks, source] of [
     [info.subtitles, "subtitles_manual"],

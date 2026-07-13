@@ -9,13 +9,14 @@ import { registerCompareTool } from "./tools/compare.js";
 import { registerGenerateTools } from "./tools/generate.js";
 import { registerListVideosTool } from "./tools/videos.js";
 import { registerHeatmapTool } from "./tools/heatmap.js";
+import { registerRetentionMomentsTool } from "./tools/retention.js";
 import { registerTrendingTool } from "./tools/trending.js";
 import { registerMetricsHistoryTool } from "./tools/metrics.js";
 import { registerImportProfileSnapshotTool } from "./tools/import-profile.js";
 import { registerAnalyzeCreatorTool, registerCompareCreatorsTool } from "./tools/creator-analysis.js";
 
 export const SERVER_NAME = "creator-research";
-export const SERVER_VERSION = "0.5.0";
+export const SERVER_VERSION = "0.6.0";
 
 /**
  * Client-reasoning-only mode: the server fetches data (transcript, comments, stats),
@@ -34,6 +35,7 @@ export function buildServer(): McpServer {
   registerGenerateTools(server);
   registerListVideosTool(server);
   registerHeatmapTool(server);
+  registerRetentionMomentsTool(server);
   registerTrendingTool(server);
   registerMetricsHistoryTool(server);
   registerImportProfileSnapshotTool(server);

@@ -20,6 +20,9 @@ Point your LLM client at a channel, a video, or a competitor's profile and ask t
 - _"Get the transcripts of their top 3 videos and write me a script in the same style."_ —
   `get_transcript` pulls captions/subtitles + engagement so the LLM can read and imitate the
   actual content, not just metadata.
+- _"What part of this video made people rewatch it — and what killed their interest?"_ —
+  `get_retention_moments` matches the replay heatmap to the transcript by timestamp, so you get
+  the actual words said at each hotspot/coldspot instead of a bare timestamp.
 - _"How is this video growing — is it still gaining views a week later?"_ — `get_metrics_history`
   turns repeated measurements into real velocity (views/day, engagement/view), and is explicit
   about what it can't compute yet, instead of guessing.
@@ -158,6 +161,7 @@ export YOUTUBE_API_KEY="your-key-here"
 | `get_transcript`          | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`                   |
 | `get_comments`            | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                                   |
 | `get_video_heatmap`       | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                                      |
+| `get_retention_moments`   | Joins the replay heatmap with the transcript by timestamp: what was actually said at the most/least rewatched moments — no manual cross-referencing       |
 | `get_trending_videos`     | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                                 |
 | `get_metrics_history`     | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements              |
 | `import_profile_snapshot` | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above                   |

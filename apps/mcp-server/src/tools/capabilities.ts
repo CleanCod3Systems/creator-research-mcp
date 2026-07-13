@@ -40,6 +40,8 @@ export function registerCapabilitiesTool(server: McpServer): void {
           "Videos without subtitles: no automatic transcription is available; try other content",
           "Without YOUTUBE_API_KEY: list_videos uses yt-dlp (views are fine, no exact likes, sometimes null)",
           "get_video_heatmap: best-effort, very new videos or ones with few views don't have enough data",
+          "get_retention_moments: needs both heatmap data and subtitles/captions for the same video — " +
+            "if either is missing, use get_video_heatmap or get_transcript alone instead",
           "Instagram has no automatic profile listing (yt-dlp: instagram:user is officially broken) — " +
             "use get_transcript with 'urls' (batch) or import_profile_snapshot for manual data",
           "get_metrics_history/velocityScore need at least 2 measurements over time on the same URL " +
