@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783896467387,
+      "tag": "0000_daily_rogue",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783899514599,
+      "tag": "0001_odd_tana_nile",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783948046788,
+      "tag": "0002_confused_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783961233931,
+      "tag": "0003_slow_hiroim",
+      "breakpoints": true
+    }
+  ]
+}

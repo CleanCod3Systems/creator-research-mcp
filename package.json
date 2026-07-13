@@ -1,0 +1,32 @@
+{
+  "name": "creator-research-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MCP server que transforma contenido de internet en conocimiento estructurado",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "turbo run test",
+    "mcp:stdio": "pnpm --filter @creator-research/mcp-server start:stdio",
+    "mcp:http": "pnpm --filter @creator-research/mcp-server start:http",
+    "db:generate": "pnpm --filter @creator-research/db generate",
+    "db:migrate": "pnpm --filter @creator-research/db migrate"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "eslint": "^9.17.0",
+    "typescript-eslint": "^8.19.0",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

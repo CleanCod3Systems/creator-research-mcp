@@ -1,0 +1,19 @@
+services:
+  mcp-http:
+    build: { context: ., target: mcp-http }
+    ports: ["3333:3333"]
+    volumes: ["./data:/app/data", "./config:/app/config"]
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+  worker:
+    build: { context: ., target: worker }
+    volumes: ["./data:/app/data", "./config:/app/config"]
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"] # opcional: podés usar tu Ollama del host
+    volumes: ["ollama-models:/root/.ollama"]
+    ports: ["11434:11434"]
+volumes:
+  ollama-models:
