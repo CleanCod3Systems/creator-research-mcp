@@ -1,6 +1,6 @@
 {
   "name": "creator-research-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "type": "module",
   "scripts": {
@@ -39,7 +39,8 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/CleanCod3Systems/creator-research-mcp"
+    "url": "https://github.com/CleanCod3Systems/creator-research-mcp",
+    "directory": "apps/mcp-server"
   },
   "publishConfig": {
     "access": "public"
