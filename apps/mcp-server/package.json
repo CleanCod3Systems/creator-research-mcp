@@ -27,7 +27,7 @@
     "vitest": "^2.1.8"
   },
   "license": "MIT",
-  "description": "MCP server que transforma videos, canales, articulos y PDFs en conocimiento estructurado",
+  "description": "MCP server that turns videos, channels, articles, and PDFs into structured knowledge",
   "keywords": [
     "mcp",
     "model-context-protocol",

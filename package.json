@@ -2,7 +2,7 @@
   "name": "creator-research-mcp",
   "private": true,
   "version": "0.1.0",
-  "description": "MCP server que transforma contenido de internet en conocimiento estructurado",
+  "description": "MCP server that turns internet content into structured knowledge",
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
   "engines": {

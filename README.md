@@ -1,38 +1,37 @@
 # Creator Research MCP
 
-Servidor MCP (TypeScript) que trae datos de contenido — YouTube, TikTok, Instagram,
-Twitter/X, LinkedIn, artículos, PDFs — para que el LLM cliente (ChatGPT, Claude) analice
-qué contenido funciona, qué patrones se repiten y cómo convertir eso en cursos, guiones o
-estrategia.
+A TypeScript MCP server that fetches content data — YouTube, TikTok, Instagram, Twitter/X,
+LinkedIn, articles, PDFs — so that the LLM client (ChatGPT, Claude) can analyze what content
+performs well, what patterns repeat, and how to turn that into courses, scripts, or strategy.
 
-Compatible con **cualquier cliente MCP**: Claude Desktop / Claude Code (stdio),
-ChatGPT y clientes remotos (Streamable HTTP).
+Works with **any MCP client**: Claude Desktop / Claude Code (stdio), ChatGPT and remote
+clients (Streamable HTTP).
 
-## Modo único: client-reasoning
+## Design: client-reasoning only
 
-El servidor **trae datos, nunca analiza**. Cero IA propia, cero Ollama, cero worker.
+The server **fetches data, it never analyzes**. Zero AI of its own, zero Ollama, zero worker.
 
 ```
-list_videos(canal)          →  estadísticas + outlierScore + tags (yt-dlp o YouTube Data API)
-get_transcript(url)         →  metadatos + subtítulos/caption (yt-dlp/FxTwitter/scraping)
-get_comments(url)           →  comentarios públicos de YouTube
+list_videos(channel)        →  stats + outlierScore + tags (yt-dlp or YouTube Data API)
+get_transcript(url)         →  metadata + subtitles/captions (yt-dlp/FxTwitter/scraping)
+get_comments(url)           →  public YouTube comments
        ↓
-El LLM cliente (ChatGPT/Claude) analiza el texto en la conversación
+The client LLM (ChatGPT/Claude) analyzes the text inside the conversation
        ↓
-save_analysis(url, facets)  →  queda persistido, consultable y comparable
+save_analysis(url, facets)  →  persisted, queryable and comparable later
 ```
 
-Esto es intencional: existió en su momento un pipeline con worker + Ollama para analizar
-en lote — se eliminó del repo por completo (ver [`docs/arquitectura.md`](docs/arquitectura.md)
-para el diseño histórico). El servidor no necesita RAM/CPU/GPU para IA: solo trae datos.
+This is intentional: an earlier local worker + Ollama pipeline for batch analysis was fully
+removed from the repo (see [`docs/architecture.md`](docs/architecture.md) for what's actually
+built). The server needs no RAM/CPU/GPU for AI — it only fetches data.
 
-## Instalación
+## Installation
 
-**Requisitos**: Node ≥ 20, `yt-dlp` en el PATH (`brew install yt-dlp` / `apt install yt-dlp`).
-Cada persona corre **su propia copia**, con **sus propias credenciales** — no hay ningún
-servidor compartido ni datos que se centralicen en ningún lado.
+**Requirements**: Node ≥ 20, `yt-dlp` on your PATH (`brew install yt-dlp` / `apt install yt-dlp`).
+Everyone runs **their own copy**, with **their own credentials** — there is no shared server
+and no data is centralized anywhere.
 
-### Opción 1 — npx (recomendada, sin clonar nada)
+### Option 1 — npx (recommended, no cloning)
 
 ```json
 {
@@ -45,175 +44,176 @@ servidor compartido ni datos que se centralicen en ningún lado.
 }
 ```
 
-Pegá esto en la config de Claude Desktop/Code. La base de datos SQLite se crea sola en
-`~/.creator-research/`. Todas las credenciales son opcionales (ver [`.env.example`](.env.example))
-— si querés usar `YOUTUBE_API_KEY`, exportala antes de abrir el cliente MCP, o corré el modo
-HTTP (abajo) que carga un `.env` automáticamente.
+Paste this into your Claude Desktop/Code config. The SQLite database is created automatically
+at `~/.creator-research/`. Every credential is optional (see [`.env.example`](.env.example)) —
+if you want to use `YOUTUBE_API_KEY`, export it before opening the MCP client, or run HTTP mode
+(below), which loads a `.env` file automatically.
 
 ```bash
-npx creator-research-mcp http   # modo HTTP :3333, para ChatGPT vía túnel
+npx creator-research-mcp http   # HTTP mode on :3333, for ChatGPT via a tunnel
 ```
 
-### Opción 2 — clonar el repo (para desarrollar o contribuir)
+### Option 2 — clone the repo (for development or contributing)
 
 ```bash
 git clone https://github.com/CleanCod3Systems/creator-research-mcp.git
 cd creator-research-mcp
 pnpm install
-cp .env.example .env   # completá tus credenciales (todas opcionales)
+cp .env.example .env   # fill in your credentials (all optional)
 pnpm build
 pnpm mcp:stdio        # stdio (Claude Desktop/Code, Cursor)
-pnpm mcp:http         # HTTP :3333 (ChatGPT vía Cloudflare Tunnel)
+pnpm mcp:http         # HTTP :3333 (ChatGPT via Cloudflare Tunnel)
 ```
 
-El binario carga `.env` automáticamente al arrancar (con `dotenv`) — no hace falta exportar
-nada a mano. `.env` nunca se sube al repo (gitignored); `.env.example` documenta cada variable.
+The binary loads `.env` automatically on startup (via `dotenv`) — nothing needs to be exported
+by hand. `.env` is never committed (gitignored); `.env.example` documents every variable.
 
-### Conectar a Claude Desktop
+### Connecting to Claude Desktop
 
-`claude_desktop_config.json` (si clonaste el repo en vez de usar npx):
+`claude_desktop_config.json` (if you cloned the repo instead of using npx):
 
 ```json
 {
   "mcpServers": {
     "creator-research": {
       "command": "pnpm",
-      "args": ["--dir", "/ruta/al/repo", "mcp:stdio"]
+      "args": ["--dir", "/path/to/repo", "mcp:stdio"]
     }
   }
 }
 ```
 
-Probá el tool `capabilities` — debe listar providers y limitaciones.
+Try the `capabilities` tool — it should list the providers and their limitations.
 
-### Conectar a ChatGPT
+### Connecting to ChatGPT
 
-Los conectores MCP de ChatGPT requieren **plan Plus/Pro** y un servidor remoto HTTPS:
+ChatGPT's MCP connectors require a **Plus/Pro plan** and a remote HTTPS server:
 
 ```bash
-# 1. Servidor HTTP con token de seguridad
-MCP_AUTH_TOKEN=$(openssl rand -hex 16) pnpm mcp:http     # anotá el token
+# 1. HTTP server with a security token
+MCP_AUTH_TOKEN=$(openssl rand -hex 16) pnpm mcp:http     # note the token
 
-# 2. Túnel HTTPS gratis
+# 2. Free HTTPS tunnel
 brew install cloudflared
 cloudflared tunnel --url http://localhost:3333
-# → te da https://algo-random.trycloudflare.com
+# → gives you https://some-random-name.trycloudflare.com
 ```
 
-En ChatGPT: **Settings → Apps & Connectors → Advanced settings → Developer mode** →
-_Create connector_ → URL: `https://algo-random.trycloudflare.com/mcp?key=TU_TOKEN`.
+In ChatGPT: **Settings → Apps & Connectors → Advanced settings → Developer mode** →
+_Create connector_ → URL: `https://some-random-name.trycloudflare.com/mcp?key=YOUR_TOKEN`.
 
-Notas: sin `MCP_AUTH_TOKEN` cualquiera con la URL usa tu servidor. La URL de trycloudflare
-**cambia en cada ejecución** y Cloudflare puede matarla sin aviso; para una URL fija, usá un
-tunnel con nombre (gratis con cuenta de Cloudflare) o Tailscale Funnel.
+Notes: without `MCP_AUTH_TOKEN`, anyone with the URL can use your server. The trycloudflare URL
+**changes on every run** and Cloudflare can kill it without notice; for a stable URL, use a
+named tunnel (free with a Cloudflare account) or Tailscale Funnel.
 
-## YOUTUBE_API_KEY (opcional, gratis, recomendado)
+## YOUTUBE_API_KEY (optional, free, recommended)
 
-Sin ella, `list_videos` funciona igual vía `yt-dlp` (vistas ok, sin likes exactos, a veces
-con `null`). Con una key gratuita de la [YouTube Data API v3](https://console.cloud.google.com/apis/credentials):
+Without it, `list_videos` still works via `yt-dlp` (views are fine, likes aren't exact, and
+occasionally come back `null`). With a free key from the
+[YouTube Data API v3](https://console.cloud.google.com/apis/credentials):
 
-- `list_videos` trae likes exactos, tags SEO reales y sin nulls (1 unidad de cuota por
-  lote de 50 videos — la cuota gratis de 10.000/día alcanza de sobra)
-- se habilita `get_trending_videos` (qué está en tendencia ahora en YouTube por región/categoría)
+- `list_videos` returns exact likes, real SEO tags, and no nulls (1 quota unit per batch of 50
+  videos — the free 10,000/day quota is more than enough)
+- `get_trending_videos` becomes available (what's currently trending on YouTube by region/category)
 
 ```bash
-export YOUTUBE_API_KEY="tu-key-acá"
+export YOUTUBE_API_KEY="your-key-here"
 ```
 
-## Tools disponibles
+## Available tools
 
-| Tool                      | Qué hace                                                                                                                                         |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `capabilities`            | Providers habilitados, límites honestos y si `YOUTUBE_API_KEY` está activa                                                                       |
-| `list_videos`             | Videos de un canal (YouTube/TikTok) con vistas, duración, outlier (mediana+MAD, no solo promedio) y tags. Guarda un snapshot histórico por video |
-| `get_transcript`          | Texto + metadatos + engagement de una o varias URLs (`urls`, hasta 15 en batch) — video/tweet/post/artículo/PDF, paginado con `offset`           |
-| `get_comments`            | Comentarios públicos de YouTube/Instagram — para detectar FAQs, críticas y contenido pedido                                                      |
-| `get_video_heatmap`       | El "most replayed" de un video de YouTube: qué segundos rebobina más la audiencia                                                                |
-| `get_trending_videos`     | Trending oficial de YouTube por región/categoría (requiere `YOUTUBE_API_KEY`)                                                                    |
-| `get_metrics_history`     | Snapshots históricos de una URL + crecimiento real (viewsPerDay, engagementPerView) entre el primero y el último — necesita ≥2 mediciones        |
-| `import_profile_snapshot` | Registra a mano followers/posts/likes/comments de un perfil sin listado automático (ej. Instagram) — alimenta el mismo historial de arriba       |
-| `analyze_creator`         | Estadísticas deterministas de un canal: mediana de vistas/duración, cadencia de publicación, keywords, performance por formato, outliers         |
-| `compare_creators`        | Compara 2-10 canales lado a lado con las mismas estadísticas — tags compartidos vs únicos                                                        |
-| `save_analysis`           | Persiste el análisis hecho por el LLM cliente sobre un `get_transcript`                                                                          |
-| `get_analysis`            | Documento por `analysisId` o `url` — `format: markdown\|json\|text`                                                                              |
-| `search_knowledge`        | Busca en todas las facetas acumuladas: "¿qué videos enseñan Astro?"                                                                              |
-| `compare`                 | Matriz determinista entre 2-10 análisis: compartido / parcial / único por fuente                                                                 |
-| `generate_course`         | Esqueleto de curso desde N análisis: dedup de temas, orden por nivel                                                                             |
-| `generate_roadmap`        | Roadmap por niveles desde el corpus, con diagrama Mermaid                                                                                        |
-| `history`                 | Análisis recientes con estado                                                                                                                    |
+| Tool                       | What it does                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `capabilities`             | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                  |
+| `list_videos`              | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video |
+| `get_transcript`           | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`         |
+| `get_comments`              | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                        |
+| `get_video_heatmap`        | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                            |
+| `get_trending_videos`      | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                       |
+| `get_metrics_history`      | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements    |
+| `import_profile_snapshot`  | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above         |
+| `analyze_creator`          | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                            |
+| `compare_creators`         | Compares 2–10 channels side by side on the same stats — shared vs. unique tags                                                                   |
+| `save_analysis`            | Persists the analysis the client LLM produced from a `get_transcript` call                                                                       |
+| `get_analysis`              | A document by `analysisId` or `url` — `format: markdown\|json\|text`                                                                             |
+| `search_knowledge`         | Searches across every accumulated facet: "which videos teach Astro?"                                                                             |
+| `compare`                  | A deterministic matrix between 2–10 analyses: shared / partial / unique per source                                                               |
+| `generate_course`          | A course skeleton from N analyses: topic dedup, ordered by level                                                                                 |
+| `generate_roadmap`         | A leveled roadmap from the corpus, with a Mermaid diagram                                                                                        |
+| `history`                  | Recent analyses with their status                                                                                                                |
 
-Flujo típico: _"traeme los videos con más vistas de @canal, el transcript de los 3 mejores
-y armame un guión de reel"_ → `list_videos` → `get_transcript` × 3 → el LLM analiza y arma
-el guión → opcionalmente `save_analysis` para consultarlo después.
+Typical flow: _"get me the most-viewed videos from @channel, the transcript of the top 3, and
+turn that into a reel script"_ → `list_videos` → `get_transcript` × 3 → the LLM analyzes and
+writes the script → optionally `save_analysis` to query it later.
 
-Variables útiles: `YTDLP_EXTRA_ARGS` (p. ej. `--cookies-from-browser chrome` para Instagram
-con rate-limit), `YOUTUBE_API_KEY`, `MCP_AUTH_TOKEN`, `DATABASE_PATH`.
+Useful env vars: `YTDLP_EXTRA_ARGS` (e.g. `--cookies-from-browser chrome` for rate-limited
+Instagram), `YOUTUBE_API_KEY`, `MCP_AUTH_TOKEN`, `DATABASE_PATH`.
 
-## Providers y limitaciones honestas
+## Providers and honest limitations
 
-| Fuente                                        | Estado                                                                             |
-| --------------------------------------------- | ---------------------------------------------------------------------------------- |
-| YouTube, artículos web, PDF, archivos locales | ✅ estable                                                                         |
-| TikTok                                        | ✅ estable (yt-dlp)                                                                |
-| Instagram, Twitter/X                          | ⚠️ fragile — best-effort, puede romperse si la plataforma cambia                   |
-| LinkedIn                                      | ⚠️ fragile — solo posts/artículos públicos; con authwall no hay extracción posible |
+| Source                                     | Status                                                                                |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- |
+| YouTube, web articles, PDF, local files    | ✅ stable                                                                              |
+| TikTok, Instagram, Twitter/X               | ⚠️ fragile — best-effort, can break if the platform changes                            |
+| LinkedIn                                    | ⚠️ fragile — public posts/articles only; behind the login wall, extraction is not possible |
 
-- **Instagram**: no hay forma de listar un perfil completo — es una limitación de `yt-dlp`
-  mismo (`instagram:user (CURRENTLY BROKEN)`, con o sin cookies), no de este servidor. Pasá
-  URLs de posts/reels puntuales con `get_transcript` (acepta `urls` en batch), o registrá
-  followers/likes/comments a mano con `import_profile_snapshot` si querés medir crecimiento
-  en el tiempo. Nunca se extraen cookies del navegador ni se intenta saltear el login.
-- **Twitter/X**: solo tweets públicos individuales (vía FxTwitter); perfiles y replies
-  fuera de alcance.
-- El tool `capabilities` expone todo esto en runtime para que el LLM cliente nunca
-  prometa lo que el servidor no puede hacer.
+- **Instagram**: there's no way to list an entire profile — this is a limitation of `yt-dlp`
+  itself (`instagram:user (CURRENTLY BROKEN)`, with or without cookies), not of this server.
+  Pass individual post/reel URLs to `get_transcript` (it accepts `urls` in batch), or manually
+  record followers/likes/comments with `import_profile_snapshot` if you want to track growth over
+  time. Browser cookies are never extracted and login is never bypassed.
+- **Twitter/X**: only individual public tweets (via FxTwitter); profiles and replies are out of
+  scope.
+- **TikTok**: `yt-dlp` best-effort; no comments support.
+- The `capabilities` tool exposes all of this at runtime so the client LLM never promises
+  something the server can't actually do.
 
-## Publicar una nueva versión (mantenedor)
+## Publishing a new version (maintainers)
 
-El workflow `.github/workflows/release.yml` ya hace todo: al pushear un tag `v*`, compila,
-testea, y publica los 4 paquetes del workspace a npm (pnpm reemplaza `workspace:*` por las
-versiones reales automáticamente).
+The `.github/workflows/release.yml` workflow does everything: pushing a `v*` tag builds, tests,
+and publishes all 4 workspace packages to npm (pnpm automatically replaces `workspace:*` with
+the real versions).
 
 ```bash
-# 1. bump de versión en los 4 package.json (core/db/providers/mcp-server) al mismo número
-# 2. commit + push a main
+# 1. bump the version in all 4 package.json files (core/db/providers/mcp-server) to the same number
+# 2. commit + push to main
 git tag v0.1.0 && git push --tags
 ```
 
-Requiere el secret `NPM_TOKEN` (Settings → Secrets → Actions del repo en GitHub) con un
-[token de automation de npm](https://www.npmjs.com/settings/~/tokens). El workflow `ci.yml`
-corre build/typecheck/lint/test en cada push/PR a `main`, sin necesidad de ningún secret.
+Requires the `NPM_TOKEN` secret (repo Settings → Secrets → Actions on GitHub) with an
+[npm automation token](https://www.npmjs.com/settings/~/tokens). The `ci.yml` workflow runs
+build/typecheck/lint/test on every push/PR to `main`, no secret required.
 
-## Arquitectura
+## Architecture
 
-- `packages/core` — dominio puro (Zod) + puertos (interfaces). Sin I/O.
+- `packages/core` — pure domain logic (Zod) + ports (interfaces). No I/O.
 - `packages/db` — Drizzle + SQLite (WAL).
-- `packages/providers` — un adapter por plataforma (YouTube, TikTok, Instagram, Twitter, LinkedIn, web, PDF).
-- `apps/mcp-server` — tools MCP activos. Dual transport (stdio/HTTP).
+- `packages/providers` — one adapter per platform (YouTube, TikTok, Instagram, Twitter, LinkedIn, web, PDF).
+- `apps/mcp-server` — the active MCP tools. Dual transport (stdio/HTTP).
 
-Detalle completo (histórico, documento de diseño original) en
-[`docs/arquitectura.md`](docs/arquitectura.md).
+Full detail in [`docs/architecture.md`](docs/architecture.md).
 
-## Seguridad
+## Security
 
-- **`.env` nunca se sube al repo** (está en `.gitignore`). Contiene tu `MCP_AUTH_TOKEN` y
-  `YOUTUBE_API_KEY` reales — cloná `.env.example` y completá tus propias credenciales, nunca
-  compartas tu `.env` ni lo pegues en un issue/PR.
-- **Generá `MCP_AUTH_TOKEN` con `openssl rand -hex 32`** (o más largo). La comparación en
-  `http.ts` es en tiempo constante (`crypto.timingSafeEqual`) para no filtrar el token por
-  timing. Si corrés el servidor sin este token, cualquiera con la URL del túnel puede usarlo
-  — el propio servidor te avisa esto por stderr al arrancar.
-- **`filePath` en `get_transcript`/`analyze` lee archivos del disco donde corre el servidor**
-  (`.md`/`.txt`/audio/video), sin sandboxing por diseño (es la vía de fallback para contenido
-  local). Si exponés el servidor en modo HTTP con un túnel público, **cualquier cliente MCP
-  conectado puede pedir cualquier archivo con esas extensiones que el proceso pueda leer**. No
-  corras esto en una máquina con archivos sensibles en `.md`/`.txt` accesibles al usuario del
-  proceso, o restringí el acceso a nivel de red/túnel.
-- **Sin llamados con `shell: true`**: toda invocación a `yt-dlp`/`ffmpeg` usa `execFile` con
-  argumentos como array (no interpolación de string), lo que descarta inyección de comandos
-  aunque una URL contenga metacaracteres de shell.
-- **`data/*.db`** (SQLite) queda 100% local y gitignored — ahí se acumula tu historial real de
-  búsquedas/análisis. No lo subas a ningún lado si contiene datos que preferís mantener privados.
-- Antes de hacer público este repo: corré `git log -p -- .env` (si en algún momento hubo un
-  commit con `.env` incluido) y, si aparece algo, seguí la guía de GitHub para purgar secretos
-  del historial — borrar el archivo en un commit nuevo NO alcanza, queda en el historial.
+- **`.env` is never committed** (it's in `.gitignore`). It holds your real `MCP_AUTH_TOKEN` and
+  `YOUTUBE_API_KEY` — copy `.env.example` and fill in your own credentials, never share your
+  `.env` or paste it into an issue/PR.
+- **Generate `MCP_AUTH_TOKEN` with `openssl rand -hex 32`** (or longer). The comparison in
+  `http.ts` runs in constant time (`crypto.timingSafeEqual`) so the token can't leak through
+  timing. If you run the server without this token, anyone with the tunnel URL can use it — the
+  server itself warns about this on stderr at startup.
+- **`filePath` in `get_transcript`/`analyze` reads files from the disk the server runs on**
+  (`.md`/`.txt`/audio/video), with no sandboxing by design (it's the fallback path for local
+  content). If you expose the server over HTTP with a public tunnel, **any connected MCP client
+  can request any file with those extensions that the process can read.** Don't run this on a
+  machine with sensitive `.md`/`.txt` files accessible to the process's user, or restrict access
+  at the network/tunnel level.
+- **No `shell: true` calls anywhere**: every `yt-dlp`/`ffmpeg` invocation uses `execFile` with
+  arguments as an array (never string interpolation), which rules out command injection even if
+  a URL contains shell metacharacters.
+- **`data/*.db`** (SQLite) stays 100% local and gitignored — this is where your real search/
+  analysis history accumulates. Don't upload it anywhere if it contains data you'd rather keep
+  private.
+- Before making a repo public: run `git log -p -- .env` (in case a commit ever included `.env`)
+  and, if anything shows up, follow GitHub's guide to purge secrets from history — deleting the
+  file in a new commit is **not** enough, it stays in history.
