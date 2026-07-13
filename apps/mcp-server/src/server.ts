@@ -18,10 +18,9 @@ export const SERVER_NAME = "creator-research";
 export const SERVER_VERSION = "0.5.0";
 
 /**
- * Modo client-reasoning únicamente: el servidor trae datos (transcript, comments, stats),
- * el LLM cliente (ChatGPT/Claude) hace el análisis. No hay motor de IA propio en este repo:
- * el pipeline worker+Ollama (analyze/analyze_channel/job_status/worker_status) se eliminó
- * por completo — nunca gastás cómputo/RAM local en analizar, solo en traer datos.
+ * Client-reasoning-only mode: the server fetches data (transcript, comments, stats),
+ * the client LLM (ChatGPT/Claude) does the analysis. There is no AI engine of its own in this
+ * repo — you never spend local compute/RAM analyzing, only fetching data.
  */
 export function buildServer(): McpServer {
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });

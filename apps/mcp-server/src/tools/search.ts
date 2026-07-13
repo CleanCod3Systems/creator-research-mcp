@@ -7,11 +7,11 @@ export function registerSearchTools(server: McpServer): void {
   server.registerTool(
     "search_knowledge",
     {
-      title: "Buscar en el conocimiento acumulado",
+      title: "Search accumulated knowledge",
       description:
-        "Busca en TODAS las facetas de TODOS los análisis guardados. Responde preguntas como " +
-        "'¿qué videos enseñan Astro?', '¿qué buenas prácticas tengo registradas sobre testing?'. " +
-        "kind filtra por tipo de faceta (technologies, best_practices, concepts...).",
+        "Searches ALL facets of ALL saved analyses. Answers questions like " +
+        "'which videos teach Astro?', 'what best practices do I have logged about testing?'. " +
+        "kind filters by facet type (technologies, best_practices, concepts...).",
       inputSchema: {
         query: z.string().min(2),
         kind: FacetKind.optional(),
@@ -35,8 +35,8 @@ export function registerSearchTools(server: McpServer): void {
         sources: [...grouped.entries()].map(([analysisId, g]) => ({ analysisId, ...g })),
         hint:
           rows.length === 0
-            ? "Sin resultados. ¿Analizaste contenido sobre ese tema? (get_transcript + save_analysis)"
-            : "get_analysis(analysisId) para el detalle",
+            ? "No results. Have you analyzed content on that topic? (get_transcript + save_analysis)"
+            : "get_analysis(analysisId) for details",
       });
     },
   );
@@ -44,8 +44,8 @@ export function registerSearchTools(server: McpServer): void {
   server.registerTool(
     "history",
     {
-      title: "Historial de análisis",
-      description: "Lista los análisis recientes (título, fuente, estado, motor de IA usado).",
+      title: "Analysis history",
+      description: "Lists recent analyses (title, source, status, AI engine used).",
       inputSchema: { limit: z.number().int().min(1).max(100).default(20) },
     },
     ({ limit }) => json({ analyses: getSearchRepo().listAnalyses(limit) }),

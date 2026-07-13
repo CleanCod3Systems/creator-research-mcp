@@ -1,15 +1,15 @@
-// UA de navegador real: sin esto YouTube a veces devuelve una página simplificada sin ytInitialData
+// Real browser UA: without this YouTube sometimes returns a simplified page without ytInitialData
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
 export interface HeatmapPoint {
   startSec: number;
   durationSec: number;
-  /** 0-1, cuánto más rebobina/repite la audiencia ese tramo respecto al resto del video. */
+  /** 0-1, how much more the audience rewinds/replays that segment relative to the rest of the video. */
   intensity: number;
 }
 
-/** video.watch?v=xxx, youtu.be/xxx, /shorts/xxx, /embed/xxx, /live/xxx, /v/xxx. null si no es video. */
+/** video.watch?v=xxx, youtu.be/xxx, /shorts/xxx, /embed/xxx, /live/xxx, /v/xxx. null if not a video. */
 export function extractYoutubeVideoId(url: string): string | null {
   const u = new URL(url);
   if (u.hostname.toLowerCase() === "youtu.be") return u.pathname.slice(1).split("/")[0] ?? null;
@@ -19,16 +19,16 @@ export function extractYoutubeVideoId(url: string): string | null {
 }
 
 /**
- * "Most replayed": el heatmap que YouTube muestra sobre la barra de progreso, con los tramos
- * que la audiencia más rebobina/repite. No es una API oficial: viene embebido en el JSON inicial
- * de la página del video. La ruta exacta del JSON cambia con el tiempo, así que en vez de
- * hardcodearla se busca recursivamente el array `heatMarkers` donde sea que esté.
+ * "Most replayed": the heatmap YouTube shows over the progress bar, with the segments
+ * the audience rewinds/replays the most. Not an official API: it comes embedded in the initial
+ * JSON of the video page. The exact JSON path changes over time, so instead of
+ * hardcoding it, the `heatMarkers` array is searched for recursively wherever it is.
  */
 export async function fetchMostReplayedHeatmap(videoId: string): Promise<HeatmapPoint[] | null> {
   const res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" },
   });
-  if (!res.ok) throw new Error(`YouTube HTTP ${String(res.status)} al pedir la página del video`);
+  if (!res.ok) throw new Error(`YouTube HTTP ${String(res.status)} requesting the video page`);
   const html = await res.text();
   const match = /var ytInitialData\s*=\s*(\{.+?\});<\/script>/s.exec(html);
   const jsonText = match?.[1];
@@ -55,11 +55,11 @@ interface RawHeatMarker {
 }
 
 /**
- * Búsqueda recursiva y defensiva de `markersList` con markerType MARKER_TYPE_HEATMAP dentro del
- * JSON de la página (formato "entity mutations" que usa YouTube, verificado 2026-07 contra HTML
- * real). No se hardcodea la ruta completa (frameworkUpdates.entityBatchUpdate.mutations[].payload
- * .macroMarkersListEntity...) porque YouTube reordena esos wrappers con el tiempo; se busca la
- * combinación markerType+markers donde sea que esté anidada.
+ * Recursive, defensive search for a `markersList` with markerType MARKER_TYPE_HEATMAP inside the
+ * page JSON ("entity mutations" format used by YouTube, verified 2026-07 against real
+ * HTML). The full path (frameworkUpdates.entityBatchUpdate.mutations[].payload
+ * .macroMarkersListEntity...) is not hardcoded because YouTube reorders those wrappers over time;
+ * the markerType+markers combination is searched for wherever it is nested.
  */
 export function findHeatMarkers(node: unknown, depth = 0): RawHeatMarker[] {
   if (depth > 20 || node === null || typeof node !== "object") return [];

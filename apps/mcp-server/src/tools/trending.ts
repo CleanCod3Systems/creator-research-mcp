@@ -3,8 +3,8 @@ import { getTrendingVideos } from "@creator-research/providers";
 import { z } from "zod";
 
 /**
- * Categorías más usadas para research de contenido (id de YouTube videoCategories).
- * No es la lista completa — cubre lo típico; para otras, el LLM puede omitir categoryId.
+ * Most-used categories for content research (YouTube videoCategories id).
+ * Not the full list — covers the typical ones; for others, the LLM can omit categoryId.
  */
 const CATEGORY_HINTS: Record<string, string> = {
   gaming: "20",
@@ -19,22 +19,22 @@ export function registerTrendingTool(server: McpServer): void {
   server.registerTool(
     "get_trending_videos",
     {
-      title: "Trending oficial de YouTube",
+      title: "Official YouTube trending",
       description:
-        "Qué está funcionando AHORA en YouTube, más allá de un canal puntual — útil para ideas de contenido " +
-        "fuera de tu propio historial. Usa el chart oficial 'mostPopular' de la YouTube Data API (gratis, requiere " +
-        "YOUTUBE_API_KEY en el servidor). category acepta un id de YouTube o uno de estos alias: " +
+        "What's working RIGHT NOW on YouTube, beyond a specific channel — useful for content ideas " +
+        "outside your own history. Uses YouTube Data API's official 'mostPopular' chart (free, requires " +
+        "YOUTUBE_API_KEY on the server). category accepts a YouTube id or one of these aliases: " +
         `${Object.keys(CATEGORY_HINTS).join(", ")}.`,
       inputSchema: {
         regionCode: z
           .string()
           .length(2)
           .default("US")
-          .describe("Código de país ISO 3166-1, ej. US, ES, AR"),
+          .describe("ISO 3166-1 country code, e.g. US, ES, AR"),
         category: z
           .string()
           .optional()
-          .describe("Alias (gaming, music, education...) o id numérico de YouTube"),
+          .describe("Alias (gaming, music, education...) or numeric YouTube id"),
         limit: z.number().int().min(1).max(50).default(15),
       },
     },
@@ -44,7 +44,7 @@ export function registerTrendingTool(server: McpServer): void {
         return json({
           error: "missing_api_key",
           message:
-            "get_trending_videos requiere YOUTUBE_API_KEY configurada en el servidor (gratis, YouTube Data API v3).",
+            "get_trending_videos requires YOUTUBE_API_KEY configured on the server (free, YouTube Data API v3).",
         });
       }
       const categoryId = category
@@ -65,7 +65,7 @@ export function registerTrendingTool(server: McpServer): void {
             publishedAt: v.publishedAt,
             tags: v.tags.length ? v.tags : null,
           })),
-          hint: "Esto es lo que está funcionando en la plataforma en general, no en un canal específico — úsalo para detectar formatos/temas de moda antes de planear contenido nuevo",
+          hint: "This is what's working on the platform in general, not on a specific channel — use it to spot trending formats/topics before planning new content",
         });
       } catch (err) {
         return json({

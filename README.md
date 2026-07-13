@@ -1,5 +1,8 @@
 # Creator Research MCP
 
+[![CI](https://github.com/CleanCod3Systems/creator-research-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/CleanCod3Systems/creator-research-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A TypeScript MCP server that fetches content data — YouTube, TikTok, Instagram, Twitter/X,
 LinkedIn, articles, PDFs — so that the LLM client (ChatGPT, Claude) can analyze what content
 performs well, what patterns repeat, and how to turn that into courses, scripts, or strategy.
@@ -7,9 +10,35 @@ performs well, what patterns repeat, and how to turn that into courses, scripts,
 Works with **any MCP client**: Claude Desktop / Claude Code (stdio), ChatGPT and remote
 clients (Streamable HTTP).
 
+## What it's for
+
+Point your LLM client at a channel, a video, or a competitor's profile and ask things like:
+
+- _"What are @channel's best-performing videos, and why do they outperform the rest?"_ —
+  `list_videos` ranks by a median+MAD outlier score, not just raw views, so a single viral fluke
+  doesn't skew the read.
+- _"Get the transcripts of their top 3 videos and write me a script in the same style."_ —
+  `get_transcript` pulls captions/subtitles + engagement so the LLM can read and imitate the
+  actual content, not just metadata.
+- _"How is this video growing — is it still gaining views a week later?"_ — `get_metrics_history`
+  turns repeated measurements into real velocity (views/day, engagement/view), and is explicit
+  about what it can't compute yet, instead of guessing.
+- _"Compare these 5 creators: who posts more often, who covers what topics, what's missing?"_ —
+  `analyze_creator`/`compare_creators` give deterministic stats (cadence, keywords, format
+  performance) across multiple channels at once.
+- _"Turn what these videos teach into a course outline / learning roadmap."_ —
+  `generate_course`/`generate_roadmap` deduplicate topics across saved analyses and order them
+  by level.
+
+Every number the server returns is either fetched directly from the platform or computed with a
+documented formula (median absolute deviation for outliers, real deltas for growth) — never
+fabricated. Where a platform genuinely doesn't expose something (Instagram profile listings,
+Twitter/X threads, LinkedIn behind login), the `capabilities` tool says so explicitly instead of
+returning a plausible-looking guess.
+
 ## Design: client-reasoning only
 
-The server **fetches data, it never analyzes**. Zero AI of its own, zero Ollama, zero worker.
+The server **fetches data, it never analyzes** — there's no AI engine running inside it.
 
 ```
 list_videos(channel)        →  stats + outlierScore + tags (yt-dlp or YouTube Data API)
@@ -21,9 +50,9 @@ The client LLM (ChatGPT/Claude) analyzes the text inside the conversation
 save_analysis(url, facets)  →  persisted, queryable and comparable later
 ```
 
-This is intentional: an earlier local worker + Ollama pipeline for batch analysis was fully
-removed from the repo (see [`docs/architecture.md`](docs/architecture.md) for what's actually
-built). The server needs no RAM/CPU/GPU for AI — it only fetches data.
+This is intentional: the server needs no RAM/CPU/GPU for AI — it only fetches and structures
+data, so it's cheap and fast to run anywhere. See [`docs/architecture.md`](docs/architecture.md)
+for the full design.
 
 ## Installation
 
@@ -122,25 +151,25 @@ export YOUTUBE_API_KEY="your-key-here"
 
 ## Available tools
 
-| Tool                       | What it does                                                                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `capabilities`             | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                  |
-| `list_videos`              | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video |
-| `get_transcript`           | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`         |
-| `get_comments`              | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                        |
-| `get_video_heatmap`        | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                            |
-| `get_trending_videos`      | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                       |
-| `get_metrics_history`      | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements    |
-| `import_profile_snapshot`  | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above         |
-| `analyze_creator`          | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                            |
-| `compare_creators`         | Compares 2–10 channels side by side on the same stats — shared vs. unique tags                                                                   |
-| `save_analysis`            | Persists the analysis the client LLM produced from a `get_transcript` call                                                                       |
-| `get_analysis`              | A document by `analysisId` or `url` — `format: markdown\|json\|text`                                                                             |
-| `search_knowledge`         | Searches across every accumulated facet: "which videos teach Astro?"                                                                             |
-| `compare`                  | A deterministic matrix between 2–10 analyses: shared / partial / unique per source                                                               |
-| `generate_course`          | A course skeleton from N analyses: topic dedup, ordered by level                                                                                 |
-| `generate_roadmap`         | A leveled roadmap from the corpus, with a Mermaid diagram                                                                                        |
-| `history`                  | Recent analyses with their status                                                                                                                |
+| Tool                      | What it does                                                                                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities`            | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                            |
+| `list_videos`             | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video |
+| `get_transcript`          | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`                   |
+| `get_comments`            | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                                   |
+| `get_video_heatmap`       | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                                      |
+| `get_trending_videos`     | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                                 |
+| `get_metrics_history`     | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements              |
+| `import_profile_snapshot` | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above                   |
+| `analyze_creator`         | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                                      |
+| `compare_creators`        | Compares 2–10 channels side by side on the same stats — shared vs. unique tags                                                                            |
+| `save_analysis`           | Persists the analysis the client LLM produced from a `get_transcript` call                                                                                |
+| `get_analysis`            | A document by `analysisId` or `url` — `format: markdown\|json\|text`                                                                                      |
+| `search_knowledge`        | Searches across every accumulated facet: "which videos teach Astro?"                                                                                      |
+| `compare`                 | A deterministic matrix between 2–10 analyses: shared / partial / unique per source                                                                        |
+| `generate_course`         | A course skeleton from N analyses: topic dedup, ordered by level                                                                                          |
+| `generate_roadmap`        | A leveled roadmap from the corpus, with a Mermaid diagram                                                                                                 |
+| `history`                 | Recent analyses with their status                                                                                                                         |
 
 Typical flow: _"get me the most-viewed videos from @channel, the transcript of the top 3, and
 turn that into a reel script"_ → `list_videos` → `get_transcript` × 3 → the LLM analyzes and
@@ -151,11 +180,11 @@ Instagram), `YOUTUBE_API_KEY`, `MCP_AUTH_TOKEN`, `DATABASE_PATH`.
 
 ## Providers and honest limitations
 
-| Source                                     | Status                                                                                |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| YouTube, web articles, PDF, local files    | ✅ stable                                                                              |
-| TikTok, Instagram, Twitter/X               | ⚠️ fragile — best-effort, can break if the platform changes                            |
-| LinkedIn                                    | ⚠️ fragile — public posts/articles only; behind the login wall, extraction is not possible |
+| Source                                  | Status                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| YouTube, web articles, PDF, local files | ✅ stable                                                                                  |
+| TikTok, Instagram, Twitter/X            | ⚠️ fragile — best-effort, can break if the platform changes                                |
+| LinkedIn                                | ⚠️ fragile — public posts/articles only; behind the login wall, extraction is not possible |
 
 - **Instagram**: there's no way to list an entire profile — this is a limitation of `yt-dlp`
   itself (`instagram:user (CURRENTLY BROKEN)`, with or without cookies), not of this server.
@@ -202,18 +231,35 @@ Full detail in [`docs/architecture.md`](docs/architecture.md).
   `http.ts` runs in constant time (`crypto.timingSafeEqual`) so the token can't leak through
   timing. If you run the server without this token, anyone with the tunnel URL can use it — the
   server itself warns about this on stderr at startup.
-- **`filePath` in `get_transcript`/`analyze` reads files from the disk the server runs on**
-  (`.md`/`.txt`/audio/video), with no sandboxing by design (it's the fallback path for local
-  content). If you expose the server over HTTP with a public tunnel, **any connected MCP client
-  can request any file with those extensions that the process can read.** Don't run this on a
-  machine with sensitive `.md`/`.txt` files accessible to the process's user, or restrict access
-  at the network/tunnel level.
-- **No `shell: true` calls anywhere**: every `yt-dlp`/`ffmpeg` invocation uses `execFile` with
-  arguments as an array (never string interpolation), which rules out command injection even if
-  a URL contains shell metacharacters.
+- **`filePath` in `get_transcript` reads files from the disk the server runs on** (`.md`/`.txt`,
+  plus media files for basic metadata), with no sandboxing by design (it's the fallback path for
+  local content). If you expose the server over HTTP with a public tunnel, **any connected MCP
+  client can request any file with those extensions that the process can read.** Don't run this
+  on a machine with sensitive `.md`/`.txt` files accessible to the process's user, or restrict
+  access at the network/tunnel level.
+- **No `shell: true` calls anywhere**: every `yt-dlp` invocation uses `execFile` with arguments
+  as an array (never string interpolation), which rules out command injection even if a URL
+  contains shell metacharacters.
 - **`data/*.db`** (SQLite) stays 100% local and gitignored — this is where your real search/
   analysis history accumulates. Don't upload it anywhere if it contains data you'd rather keep
   private.
 - Before making a repo public: run `git log -p -- .env` (in case a commit ever included `.env`)
   and, if anything shows up, follow GitHub's guide to purge secrets from history — deleting the
   file in a new commit is **not** enough, it stays in history.
+
+## Contributing
+
+```bash
+pnpm install
+pnpm build       # compile all workspace packages
+pnpm typecheck    # includes test files, unlike build
+pnpm lint         # eslint
+pnpm test         # vitest, per package
+```
+
+Pull requests should keep all four commands passing. There's no separate style guide beyond
+what ESLint/Prettier already enforce (`pnpm format` to auto-fix).
+
+## License
+
+[MIT](LICENSE)

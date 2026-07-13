@@ -1,24 +1,24 @@
 import type { AnalysisDocument, FacetItem, FacetKind } from "../domain/analysis.js";
 
 const FACET_TITLES: Record<FacetKind, string> = {
-  summary: "Resumen",
-  conclusions: "Conclusiones",
-  technologies: "Tecnologías",
+  summary: "Summary",
+  conclusions: "Conclusions",
+  technologies: "Technologies",
   frameworks: "Frameworks",
-  tools: "Herramientas",
-  code: "Código mencionado",
-  best_practices: "Buenas prácticas",
-  bad_practices: "Malas prácticas",
-  errors: "Errores detectados",
-  architecture: "Arquitectura",
-  level: "Nivel",
-  curriculum: "Temario",
-  questions: "Preguntas importantes",
-  concepts: "Conceptos",
-  keywords: "Palabras clave",
-  glossary: "Glosario",
-  examples: "Ejemplos",
-  steps: "Pasos",
+  tools: "Tools",
+  code: "Mentioned code",
+  best_practices: "Best practices",
+  bad_practices: "Bad practices",
+  errors: "Detected errors",
+  architecture: "Architecture",
+  level: "Level",
+  curriculum: "Curriculum",
+  questions: "Important questions",
+  concepts: "Concepts",
+  keywords: "Keywords",
+  glossary: "Glossary",
+  examples: "Examples",
+  steps: "Steps",
 };
 
 function ts(sec: number): string {
@@ -36,10 +36,10 @@ function renderItem(item: FacetItem): string {
 
 export function analysisToMarkdown(doc: AnalysisDocument, sections?: FacetKind[]): string {
   const out: string[] = [`# ${doc.title}`, ""];
-  const meta: string[] = [`Proveedor: ${doc.provider}`];
-  if (doc.sourceUrl) meta.push(`Fuente: ${doc.sourceUrl}`);
-  if (doc.durationSec) meta.push(`Duración: ${ts(doc.durationSec)}`);
-  if (doc.ai) meta.push(`IA: ${doc.ai.engine}/${doc.ai.model}`);
+  const meta: string[] = [`Provider: ${doc.provider}`];
+  if (doc.sourceUrl) meta.push(`Source: ${doc.sourceUrl}`);
+  if (doc.durationSec) meta.push(`Duration: ${ts(doc.durationSec)}`);
+  if (doc.ai) meta.push(`AI: ${doc.ai.engine}/${doc.ai.model}`);
   out.push(`> ${meta.join(" · ")}`, "");
   if (doc.warnings.length > 0) {
     out.push("> ⚠️ " + doc.warnings.join(" · "), "");

@@ -7,23 +7,23 @@ const MAX_CHARS_DEFAULT = 80_000;
 const MAX_BATCH = 15;
 
 /**
- * Modo client-reasoning: no requiere Ollama ni worker.
- * El servidor extrae transcript+metadatos (yt-dlp) y el LLM del cliente
- * (Claude/ChatGPT) hace el análisis en la conversación.
- * Complemento: save_analysis persiste ese análisis para búsqueda/comparación futura.
+ * Client-reasoning mode: no AI engine of its own.
+ * The server extracts transcript+metadata (yt-dlp) and the client LLM
+ * (Claude/ChatGPT) does the analysis in the conversation.
+ * Complement: save_analysis persists that analysis for future search/comparison.
  */
 export function registerGetTranscriptTool(server: McpServer): void {
   server.registerTool(
     "get_transcript",
     {
-      title: "Obtener transcript",
+      title: "Get transcript",
       description:
-        "Extrae metadatos, engagement (views/likes/comments) y texto de una fuente (video con subtítulos, " +
-        "tweet, post de Instagram/LinkedIn, artículo web, PDF, archivo md/txt) SIN motor de IA propio: vos " +
-        "(el LLM cliente) analizás el texto en la conversación. No requiere worker ni Ollama. " +
-        `Pasá 'urls' (hasta ${String(MAX_BATCH)}) en vez de 'url' para traer varias fuentes en un solo ` +
-        "llamado — útil para Instagram/Twitter, donde no hay listado automático de perfil y hay que pegar " +
-        "posts puntuales. Tras analizar, guardá el resultado con save_analysis. Transcripts largos: usá offset.",
+        "Extracts metadata, engagement (views/likes/comments), and text from a source (video with subtitles, " +
+        "tweet, Instagram/LinkedIn post, web article, PDF, md/txt file) WITHOUT its own AI engine: you " +
+        "(the client LLM) analyze the text in the conversation. " +
+        `Pass 'urls' (up to ${String(MAX_BATCH)}) instead of 'url' to fetch several sources in a single ` +
+        "call — useful for Instagram/Twitter, where there's no automatic profile listing and you have to paste " +
+        "individual posts. After analyzing, save the result with save_analysis. Long transcripts: use offset.",
       inputSchema: {
         url: z.string().url().optional(),
         urls: z
@@ -31,8 +31,8 @@ export function registerGetTranscriptTool(server: McpServer): void {
           .min(1)
           .max(MAX_BATCH)
           .optional()
-          .describe("Varias URLs en un solo llamado"),
-        filePath: z.string().optional().describe("Path de archivo en el disco del servidor"),
+          .describe("Several URLs in a single call"),
+        filePath: z.string().optional().describe("File path on the server's disk"),
         offset: z.number().int().min(0).default(0),
         maxChars: z.number().int().min(1000).max(200_000).default(MAX_CHARS_DEFAULT),
       },
@@ -42,7 +42,7 @@ export function registerGetTranscriptTool(server: McpServer): void {
       if (provided !== 1) {
         return json({
           error: "bad_request",
-          message: "Pasá exactamente uno: url, urls o filePath",
+          message: "Pass exactly one: url, urls, or filePath",
         });
       }
       if (urls) {
@@ -70,7 +70,7 @@ async function fetchOne(
     return {
       url: ref.url,
       error: "unsupported_source",
-      hint: "Consultá capabilities para ver fuentes soportadas",
+      hint: "Check capabilities to see supported sources",
     };
   }
   let kind;
@@ -88,13 +88,13 @@ async function fetchOne(
       url: ref.url,
       error: "unsupported_kind",
       kind,
-      hint: "Para canales usá list_videos; playlists no están soportadas todavía",
+      hint: "For channels use list_videos; playlists aren't supported yet",
     };
   }
 
   const hash = sourceHash(source);
 
-  // reuso: si ya extrajimos este transcript, no volver a llamar a yt-dlp
+  // reuse: if we already extracted this transcript, don't call yt-dlp again
   const existingId = content.findIdByHash(hash);
   const cached = existingId !== null ? content.getTranscript(existingId) : null;
   if (cached) {
@@ -105,7 +105,7 @@ async function fetchOne(
     );
   }
 
-  // en batch, una URL que falla (ej. Instagram con rate-limit) no puede tumbar las demás
+  // in batch, one URL that fails (e.g. Instagram with rate-limit) can't bring down the others
   let meta;
   let text;
   try {
@@ -123,7 +123,7 @@ async function fetchOne(
       url: ref.url,
       error: "no_text_available",
       message:
-        "La fuente no tiene texto directo (sin subtítulos ni artículo extraíble). Probá otro video/URL.",
+        "The source has no direct text (no subtitles, no extractable article). Try another video/URL.",
     };
   }
   const contentItemId = content.upsertContentItem({
@@ -184,7 +184,7 @@ async function fetchOne(
       comments: meta.commentCount ?? null,
       transcript: { text: text.text, source: text.source, language: text.language },
       nextStep:
-        "Analizá este transcript (resumen, tecnologías, prácticas, temario...) y persistí el resultado con save_analysis(url, facets).",
+        "Analyze this transcript (summary, technologies, practices, syllabus...) and persist the result with save_analysis(url, facets).",
     },
     offset,
     maxChars,

@@ -1,4 +1,4 @@
-/** Mediana: no se deja arrastrar por un solo valor viral, a diferencia del promedio. */
+/** Median: unlike the mean, it isn't dragged by a single viral value. */
 export function median(nums: number[]): number {
   if (nums.length === 0) return 0;
   const sorted = [...nums].sort((a, b) => a - b);
@@ -8,25 +8,25 @@ export function median(nums: number[]): number {
   return ((sorted[mid - 1] ?? 0) + midValue) / 2;
 }
 
-/** Median Absolute Deviation: dispersión robusta a outliers (a diferencia del desvío estándar). */
+/** Median Absolute Deviation: dispersion robust to outliers (unlike standard deviation). */
 export function medianAbsoluteDeviation(nums: number[], center = median(nums)): number {
   if (nums.length === 0) return 0;
   return median(nums.map((n) => Math.abs(n - center)));
 }
 
 export interface OutlierResult {
-  /** cuántas veces por encima/debajo de la mediana del grupo (1 = igual a la mediana) */
+  /** how many times above/below the cohort's median (1 = equal to the median) */
   ratio: number | null;
-  /** z-score modificado (0.6745·(x-mediana)/MAD): la forma robusta de medir qué tan atípico es un valor */
+  /** modified z-score (0.6745·(x-median)/MAD): the robust way to measure how atypical a value is */
   score: number | null;
-  /** tamaño del grupo de comparación: pocas muestras → baja confianza aunque el score sea alto */
+  /** size of the comparison group: few samples → low confidence even if the score is high */
   sampleSize: number;
   confidence: "low" | "medium" | "high";
 }
 
 /**
- * Detección de outliers robusta a valores virales: usa mediana+MAD, no promedio+desvío estándar.
- * Con MAD=0 (todos los valores iguales o casi) el z-score no es fiable → cae a null con confidence baja.
+ * Outlier detection robust to viral values: uses median+MAD, not mean+standard deviation.
+ * With MAD=0 (all values equal or nearly so) the z-score isn't reliable → falls back to null with low confidence.
  */
 export function detectOutlier(value: number, cohort: number[]): OutlierResult {
   const sampleSize = cohort.length;
@@ -36,7 +36,7 @@ export function detectOutlier(value: number, cohort: number[]): OutlierResult {
   const med = median(cohort);
   const mad = medianAbsoluteDeviation(cohort, med);
   const ratio = med > 0 ? Math.round((value / med) * 100) / 100 : null;
-  // 0.6745 normaliza el MAD para que sea comparable a un z-score estándar bajo distribución normal
+  // 0.6745 normalizes the MAD so it's comparable to a standard z-score under a normal distribution
   const score = mad > 0 ? Math.round(((0.6745 * (value - med)) / mad) * 100) / 100 : null;
   const confidence: OutlierResult["confidence"] =
     sampleSize >= 10 ? "high" : sampleSize >= 4 ? "medium" : "low";
@@ -60,14 +60,14 @@ export interface GrowthMetrics {
   commentsPerLike: number | null;
   contentAgeHours: number | null;
   sampleSize: number;
-  /** Explica en texto por qué algún campo quedó null — nunca se inventa un denominador. */
+  /** Text explanation of why some field ended up null — a denominator is never invented. */
   limitations: string[];
 }
 
 /**
- * Deltas y velocidad a partir de snapshots con timestamp. Nunca divide por un denominador
- * ausente o cero: cualquier métrica que no se pueda calcular con certeza queda `null`, con la
- * razón explicada en `limitations` (nunca se adivina).
+ * Deltas and velocity from timestamped snapshots. Never divides by an absent or zero
+ * denominator: any metric that can't be calculated with certainty stays `null`, with the
+ * reason explained in `limitations` (never guessed).
  */
 export function computeGrowthMetrics(
   snapshots: MetricSnapshotLike[],
@@ -91,7 +91,7 @@ export function computeGrowthMetrics(
     limitations,
   };
   if (!first || !last) {
-    limitations.push("Sin snapshots todavía: necesita al menos una medición histórica");
+    limitations.push("No snapshots yet: needs at least one historical measurement");
     return empty;
   }
 
@@ -99,7 +99,7 @@ export function computeGrowthMetrics(
     (new Date(last.observedAt).getTime() - new Date(first.observedAt).getTime()) / 3_600_000;
   const viewsDelta =
     first.viewCount !== null && last.viewCount !== null ? last.viewCount - first.viewCount : null;
-  if (viewsDelta === null) limitations.push("Falta viewCount en el primer o el último snapshot");
+  if (viewsDelta === null) limitations.push("Missing viewCount in the first or last snapshot");
   const likesDelta =
     first.likeCount !== null && last.likeCount !== null ? last.likeCount - first.likeCount : null;
   const commentsDelta =
@@ -112,7 +112,7 @@ export function computeGrowthMetrics(
     viewsPerHour = Math.round((viewsDelta / elapsedHours) * 100) / 100;
   } else if (elapsedHours <= 0) {
     limitations.push(
-      "Los snapshots disponibles son del mismo momento: falta ventana de tiempo para medir velocidad",
+      "The available snapshots are from the same moment: missing a time window to measure velocity",
     );
   }
   const viewsPerDay = viewsPerHour !== null ? Math.round(viewsPerHour * 24 * 100) / 100 : null;
@@ -122,7 +122,7 @@ export function computeGrowthMetrics(
       ? Math.round(((last.likeCount + last.commentCount) / last.viewCount) * 10_000) / 10_000
       : null;
   if (engagementPerView === null)
-    limitations.push("Falta views, likes o comments del snapshot más reciente");
+    limitations.push("Missing views, likes, or comments from the most recent snapshot");
 
   const commentsPerLike =
     last.likeCount && last.likeCount > 0 && last.commentCount !== null
@@ -132,7 +132,7 @@ export function computeGrowthMetrics(
   const contentAgeHours = publishedAt
     ? Math.round(((now.getTime() - new Date(publishedAt).getTime()) / 3_600_000) * 10) / 10
     : null;
-  if (contentAgeHours === null) limitations.push("Fecha de publicación desconocida");
+  if (contentAgeHours === null) limitations.push("Publication date unknown");
 
   return {
     viewsDelta,

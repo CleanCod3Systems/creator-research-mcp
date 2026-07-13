@@ -22,7 +22,7 @@ export type SourceRef = z.infer<typeof SourceRef>;
 export const AnalysisDepth = z.enum(["quick", "standard", "full"]);
 export type AnalysisDepth = z.infer<typeof AnalysisDepth>;
 
-/** Quita parámetros de tracking y normaliza — clave de idempotencia. */
+/** Strips tracking parameters and normalizes — idempotency key. */
 export function canonicalizeUrl(raw: string): string {
   const url = new URL(raw);
   const tracking = [
@@ -41,7 +41,7 @@ export function canonicalizeUrl(raw: string): string {
   return url.toString();
 }
 
-/** sha256(fuente + depth + pipelineVersion + aiProfile) — clave de cache. */
+/** sha256(source + depth + pipelineVersion + aiProfile) — cache key. */
 export function contentHash(
   source: SourceRef,
   depth: AnalysisDepth,
@@ -55,8 +55,8 @@ export function contentHash(
 }
 
 /**
- * Identidad del CONTENIDO (independiente de depth/perfil de IA).
- * contentHash identifica un ANÁLISIS específico; sourceHash identifica la fuente.
+ * Identity of the CONTENT (independent of depth/AI profile).
+ * contentHash identifies a specific ANALYSIS; sourceHash identifies the source.
  */
 export function sourceHash(source: SourceRef): string {
   const id = source.type === "url" ? canonicalizeUrl(source.url) : `file:${source.filePath}`;

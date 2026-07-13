@@ -39,7 +39,7 @@ function collectDocs(analysisIds: number[] | undefined): {
   return { docs, missing };
 }
 
-/** Deduplica items por value normalizado, fusionando fuentes. */
+/** Deduplicates items by normalized value, merging sources. */
 function dedupeTopics(
   docs: Map<number, AnalysisDocument>,
   kinds: ("curriculum" | "concepts" | "technologies")[],
@@ -67,12 +67,12 @@ export function registerGenerateTools(server: McpServer): void {
   server.registerTool(
     "generate_course",
     {
-      title: "Generar esqueleto de curso",
+      title: "Generate course skeleton",
       description:
-        "Ensambla un curso desde N análisis: deduplica temas repetidos entre videos, preserva el orden de " +
-        "enseñanza y agrupa en módulos, con referencia a la fuente de cada lección. Devuelve un ESQUELETO " +
-        "curado con referencias (no contenido copiado): refiná nombres de módulos, redactá ejercicios y " +
-        "proyecto final vos. Sin analysisIds usa todos los análisis done.",
+        "Assembles a course from N analyses: deduplicates topics repeated across videos, preserves teaching " +
+        "order, and groups them into modules, with a reference to the source of each lesson. Returns a curated " +
+        "SKELETON with references (not copied content): refine module names and write exercises and the " +
+        "final project yourself. Without analysisIds it uses all done analyses.",
       inputSchema: {
         title: z.string().default("Curso generado"),
         analysisIds: z.array(z.number().int().positive()).min(1).max(20).optional(),
@@ -85,18 +85,18 @@ export function registerGenerateTools(server: McpServer): void {
         return json({
           error: "no_analyses",
           missing,
-          hint: "Analizá contenido primero: get_transcript + save_analysis",
+          hint: "Analyze content first: get_transcript + save_analysis",
         });
 
-      // temario en orden de aparición, deduplicado entre fuentes
+      // syllabus in order of appearance, deduplicated across sources
       const lessons = dedupeTopics(docs, ["curriculum"]);
       if (lessons.length === 0) {
         return json({
           error: "no_curriculum",
-          hint: "Los análisis no tienen faceta curriculum (usá depth standard o full al analizar)",
+          hint: "The analyses don't have a curriculum facet (use depth standard or full when analyzing)",
         });
       }
-      // orden: beginner → intermediate → advanced, estable dentro de cada nivel
+      // order: beginner → intermediate → advanced, stable within each level
       lessons.sort(
         (a, b) =>
           LEVEL_ORDER.indexOf(a.level as (typeof LEVEL_ORDER)[number]) -
@@ -107,7 +107,7 @@ export function registerGenerateTools(server: McpServer): void {
       for (let i = 0; i < lessons.length; i += lessonsPerModule) {
         const chunk = lessons.slice(i, i + lessonsPerModule);
         modules.push({
-          title: `Módulo ${String(modules.length + 1)} (renombrar según contenido)`,
+          title: `Module ${String(modules.length + 1)} (rename based on content)`,
           lessons: chunk.map((l) => ({
             topic: l.topic,
             detail: l.detail,
@@ -129,9 +129,9 @@ export function registerGenerateTools(server: McpServer): void {
         courseId,
         ...structure,
         nextSteps: [
-          "Renombrá los módulos según su contenido real",
-          "Redactá 2-3 ejercicios por módulo y un proyecto final que cubra ≥70% de los temas",
-          "Los sources te dicen qué video cubre cada lección (para citar o profundizar)",
+          "Rename the modules based on their actual content",
+          "Write 2-3 exercises per module and a final project covering ≥70% of the topics",
+          "The sources tell you which video covers each lesson (to cite or go deeper)",
         ],
       });
     },
@@ -140,30 +140,30 @@ export function registerGenerateTools(server: McpServer): void {
   server.registerTool(
     "generate_roadmap",
     {
-      title: "Generar roadmap de aprendizaje",
+      title: "Generate learning roadmap",
       description:
-        "Construye un roadmap desde el conocimiento acumulado: tecnologías y conceptos del corpus ordenados " +
-        "por nivel (beginner → advanced), con las fuentes que cubren cada tema y un diagrama Mermaid. " +
-        "Cada nodo viene del corpus analizado (trazable) — completá vos los temas del dominio que falten, " +
-        "marcándolos como sugerencia propia. Sin analysisIds usa todo lo analizado.",
+        "Builds a roadmap from accumulated knowledge: technologies and concepts from the corpus ordered " +
+        "by level (beginner → advanced), with the sources covering each topic and a Mermaid diagram. " +
+        "Each node comes from the analyzed corpus (traceable) — add any missing domain topics yourself, " +
+        "marking them as your own suggestion. Without analysisIds it uses everything analyzed.",
       inputSchema: {
         domain: z.enum(["frontend", "backend", "ai", "devops", "custom"]).default("custom"),
         goal: z
           .string()
           .optional()
-          .describe("Objetivo si domain=custom, p.ej. 'dominar React con IA'"),
+          .describe("Goal if domain=custom, e.g. 'master React with AI'"),
         analysisIds: z.array(z.number().int().positive()).min(1).max(50).optional(),
       },
     },
     ({ domain, goal, analysisIds }) => {
       const { docs } = collectDocs(analysisIds);
-      if (docs.size === 0) return json({ error: "no_analyses", hint: "Analizá contenido primero" });
+      if (docs.size === 0) return json({ error: "no_analyses", hint: "Analyze content first" });
 
       const topics = dedupeTopics(docs, ["concepts", "technologies"]);
       if (topics.length === 0)
         return json({
           error: "no_topics",
-          hint: "Los análisis no tienen conceptos/tecnologías extraídos",
+          hint: "The analyses don't have concepts/technologies extracted",
         });
 
       const levels: Record<string, { topic: string; detail?: string; coveredBy: string[] }[]> = {
@@ -209,7 +209,7 @@ export function registerGenerateTools(server: McpServer): void {
         levels,
         mermaid,
         honestNote:
-          "Todos los nodos salen del corpus analizado. Si el dominio tiene áreas obvias sin cubrir, agregalas marcadas como sugerencia tuya (no del corpus).",
+          "All nodes come from the analyzed corpus. If the domain has obvious uncovered areas, add them marked as your own suggestion (not from the corpus).",
       });
     },
   );

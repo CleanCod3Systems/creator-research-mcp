@@ -14,19 +14,19 @@ const COMPARABLE: FacetKind[] = [
 ];
 
 /**
- * Comparación determinista (intersección/diferencia de facetas, puro SQL/JS —
- * sin alucinaciones). La síntesis y el veredicto los hace el LLM cliente
- * sobre esta matriz de evidencia.
+ * Deterministic comparison (intersection/difference of facets, pure SQL/JS —
+ * no hallucinations). The synthesis and verdict are done by the client LLM
+ * working from this evidence matrix.
  */
 export function registerCompareTool(server: McpServer): void {
   server.registerTool(
     "compare",
     {
-      title: "Comparar análisis",
+      title: "Compare analyses",
       description:
-        "Compara 2-10 análisis existentes: qué tecnologías/conceptos/temario comparten y qué es único de cada uno " +
-        "(cálculo determinista sobre las facetas guardadas). Ideal para: comparar creadores, detectar solapamiento " +
-        "y encontrar huecos de contenido. Sintetizá vos el veredicto sobre la matriz devuelta.",
+        "Compares 2-10 existing analyses: what technologies/concepts/syllabus they share and what's unique to each " +
+        "one (deterministic computation over the saved facets). Ideal for: comparing creators, detecting overlap " +
+        "and finding content gaps. Synthesize the verdict yourself from the returned matrix.",
       inputSchema: {
         analysisIds: z.array(z.number().int().positive()).min(2).max(10),
       },
@@ -44,7 +44,7 @@ export function registerCompareTool(server: McpServer): void {
         return json({
           error: "missing_analyses",
           missing,
-          hint: "Esos IDs no existen o no están en estado done (ver history)",
+          hint: "Those IDs don't exist or aren't in done status (see history)",
         });
       }
 
@@ -98,8 +98,8 @@ export function registerCompareTool(server: McpServer): void {
         subjects,
         byKind,
         synthesisGuide:
-          "Con esta matriz: 1) solapamiento (sharedByAll), 2) fortalezas únicas (uniquePer), " +
-          "3) huecos = temas que NINGUNO cubre y la audiencia esperaría del dominio.",
+          "With this matrix: 1) overlap (sharedByAll), 2) unique strengths (uniquePer), " +
+          "3) gaps = topics NONE of them cover that the audience would expect from the domain.",
       });
     },
   );

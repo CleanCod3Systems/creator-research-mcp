@@ -9,15 +9,15 @@ describe("extractYoutubeVideoId", () => {
     ["https://www.youtube.com/shorts/abc123", "abc123"],
     ["https://www.youtube.com/embed/abc123", "abc123"],
     ["https://www.youtube.com/live/abc123", "abc123"],
-    ["https://www.youtube.com/@midudev", null], // canal, no un video
+    ["https://www.youtube.com/@midudev", null], // channel, not a video
   ])("%s → %s", (url, expected) => {
     expect(extractYoutubeVideoId(url)).toBe(expected);
   });
 });
 
 describe("findHeatMarkers", () => {
-  // estructura real verificada 2026-07 contra HTML de YouTube (formato "entity mutations")
-  it("encuentra markersList MARKER_TYPE_HEATMAP sin importar cuán anidado esté", () => {
+  // real structure verified 2026-07 against YouTube HTML ("entity mutations" format)
+  it("finds markersList MARKER_TYPE_HEATMAP no matter how deeply nested", () => {
     const fixture = {
       frameworkUpdates: {
         entityBatchUpdate: {
@@ -55,14 +55,14 @@ describe("findHeatMarkers", () => {
     });
   });
 
-  it("ignora markersList de otros markerType (ej. capítulos)", () => {
+  it("ignores markersList of other markerTypes (e.g. chapters)", () => {
     const fixture = {
       markersList: { markerType: "MARKER_TYPE_CHAPTERS", markers: [{ startMillis: "0" }] },
     };
     expect(findHeatMarkers(fixture)).toEqual([]);
   });
 
-  it("devuelve [] si no hay heatmap en el árbol (video sin data suficiente)", () => {
+  it("returns [] if there's no heatmap in the tree (video without enough data)", () => {
     expect(findHeatMarkers({ foo: { bar: [1, 2, { baz: "x" }] } })).toEqual([]);
   });
 });

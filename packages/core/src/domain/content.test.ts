@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalizeUrl, contentHash } from "./content.js";
 
 describe("canonicalizeUrl", () => {
-  it("elimina parámetros de tracking y hash", () => {
+  it("removes tracking parameters and hash", () => {
     expect(canonicalizeUrl("https://YouTube.com/watch?v=abc&utm_source=x&si=123#t=5")).toBe(
       "https://youtube.com/watch?v=abc",
     );
@@ -10,7 +10,7 @@ describe("canonicalizeUrl", () => {
 });
 
 describe("contentHash", () => {
-  it("es estable para la misma entrada e ignora tracking", () => {
+  it("is stable for the same input and ignores tracking", () => {
     const a = contentHash(
       { type: "url", url: "https://youtu.be/x?si=1" },
       "standard",
@@ -25,7 +25,7 @@ describe("contentHash", () => {
     );
     expect(a).toBe(b);
   });
-  it("cambia si cambia depth o pipelineVersion", () => {
+  it("changes if depth or pipelineVersion changes", () => {
     const base = contentHash({ type: "url", url: "https://youtu.be/x" }, "standard", "1", "p");
     expect(contentHash({ type: "url", url: "https://youtu.be/x" }, "full", "1", "p")).not.toBe(
       base,

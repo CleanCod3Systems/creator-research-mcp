@@ -5,7 +5,6 @@ import type {
   ProviderCapabilities,
   TextPayload,
 } from "@creator-research/core";
-import { downloadAudio, dumpInfo } from "./ytdlp.js";
 import { isTransientHttpError, withRetry } from "./retry.js";
 
 const HOSTS = [
@@ -31,7 +30,7 @@ interface FxTweet {
   views?: number | null;
 }
 
-/** Tweets públicos: texto vía FxTwitter (espejo público, sin API paga) + yt-dlp para video. */
+/** Public tweets: text via FxTwitter (public mirror, no paid API) + yt-dlp for video. */
 export class TwitterProvider implements ContentProvider {
   readonly name = "twitter";
   private readonly cache = new Map<string, FxTweet>();
@@ -54,12 +53,11 @@ export class TwitterProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: false,
-        mediaDownload: true,
         comments: false,
         channelListing: false,
       },
       legalNotes:
-        "Solo tweets públicos; texto vía FxTwitter, video vía yt-dlp; replies fuera de alcance",
+        "Public tweets only; text via FxTwitter, video via yt-dlp; replies out of scope",
     };
   }
 
@@ -67,7 +65,7 @@ export class TwitterProvider implements ContentProvider {
     const m = STATUS_RE.exec(new URL(url).pathname);
     if (!m?.[1]) {
       throw new Error(
-        `No es una URL de tweet: ${url}. Los perfiles de X/Twitter no son analizables.`,
+        `Not a tweet URL: ${url}. X/Twitter profiles cannot be analyzed.`,
       );
     }
     return m[1];
@@ -84,7 +82,7 @@ export class TwitterProvider implements ContentProvider {
         });
         if (!res.ok) {
           throw new Error(
-            `FxTwitter HTTP ${String(res.status)} para el tweet ${id} (¿privado o borrado?)`,
+            `FxTwitter HTTP ${String(res.status)} for tweet ${id} (private or deleted?)`,
           );
         }
         return (await res.json()) as { code?: number; tweet?: FxTweet };
@@ -92,7 +90,7 @@ export class TwitterProvider implements ContentProvider {
       { isRetryable: isTransientHttpError },
     );
     if (!data.tweet) {
-      throw new Error(`FxTwitter no devolvió el tweet ${id} (code ${String(data.code ?? 0)})`);
+      throw new Error(`FxTwitter did not return tweet ${id} (code ${String(data.code ?? 0)})`);
     }
     this.cache.set(id, data.tweet);
     return data.tweet;
@@ -100,7 +98,7 @@ export class TwitterProvider implements ContentProvider {
 
   async fetchMetadata(url: string): Promise<ContentMetadata> {
     const t = await this.tweet(url);
-    const handle = t.author?.screen_name ?? "desconocido";
+    const handle = t.author?.screen_name ?? "unknown";
     return {
       externalId: t.id ?? this.statusId(url),
       title: `@${handle}: ${(t.text ?? "").slice(0, 80)}`,
@@ -117,7 +115,7 @@ export class TwitterProvider implements ContentProvider {
     };
   }
 
-  /** Tweet con video → null para que el pipeline transcriba; el texto queda en metadata. */
+  /** Tweet with video → null (no transcription support); the tweet's text stays in metadata. */
   async fetchText(url: string): Promise<TextPayload | null> {
     const t = await this.tweet(url);
     if (t.media?.videos?.length) return null;
@@ -125,10 +123,4 @@ export class TwitterProvider implements ContentProvider {
     return { text: t.text, source: "native_text", language: t.lang ?? undefined };
   }
 
-  async fetchMedia(url: string, destDir: string): Promise<string | null> {
-    const t = await this.tweet(url);
-    if (!t.media?.videos?.length) return null;
-    const info = await dumpInfo(url);
-    return downloadAudio(url, destDir, info.id);
-  }
 }

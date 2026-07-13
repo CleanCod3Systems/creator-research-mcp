@@ -12,11 +12,11 @@ import { extractText, getDocumentProxy } from "unpdf";
 interface PdfDocumentProxy {
   getMetadata(): Promise<{ info?: { Title?: string } }>;
 }
-// unpdf no publica tipos resolubles para getDocumentProxy (queda como tipo "error" para TS);
-// se aísla el cast acá, en un solo lugar, en vez de dejar `any` filtrarse a cada uso más abajo.
+// unpdf doesn't ship resolvable types for getDocumentProxy (it's typed as "error" for TS);
+// the cast is isolated here, in a single place, instead of letting `any` leak into every use below.
 const getPdfProxy = getDocumentProxy as unknown as (data: Uint8Array) => Promise<PdfDocumentProxy>;
 
-/** PDFs por URL o path local. OCR de escaneados: fase 2. */
+/** PDFs by URL or local path. Scanned (image-only) PDFs with no embedded text are out of scope. */
 export class PdfProvider implements ContentProvider {
   readonly name = "pdf";
   private readonly cache = new Map<string, { title: string; text: string; pages: number }>();
@@ -39,7 +39,6 @@ export class PdfProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: false,
-        mediaDownload: false,
         comments: false,
         channelListing: false,
       },
@@ -57,13 +56,13 @@ export class PdfProvider implements ContentProvider {
     const meta = (await pdf.getMetadata().catch(() => null))?.info;
     const rawTitle = meta?.Title?.trim();
     const result = {
-      // "" cuenta como sin título tanto como null/undefined: por eso `||`, no `??`, a propósito
+      // "" counts as no title just like null/undefined: hence `||`, not `??`, on purpose
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       title: rawTitle || basename(ref),
       text: text.trim(),
       pages: totalPages,
     };
-    if (!result.text) throw new Error("PDF sin texto extraíble (¿escaneado? OCR llega en fase 2)");
+    if (!result.text) throw new Error("PDF has no extractable text (scanned PDFs are not supported)");
     this.cache.set(ref, result);
     return result;
   }
@@ -76,9 +75,5 @@ export class PdfProvider implements ContentProvider {
   async fetchText(ref: string): Promise<TextPayload | null> {
     const p = await this.extract(ref);
     return { text: p.text, source: "native_text" };
-  }
-
-  fetchMedia(): Promise<string | null> {
-    return Promise.resolve(null);
   }
 }

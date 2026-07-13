@@ -3,7 +3,7 @@ import { extractYoutubeVideoId, fetchMostReplayedHeatmap } from "@creator-resear
 import { z } from "zod";
 
 export function formatTimestamp(sec: number): string {
-  // redondear el TOTAL antes de partir en min/seg evita el carry "10:60" en vez de "11:00"
+  // rounding the TOTAL before splitting into min/sec avoids the "10:60" carry instead of "11:00"
   const total = Math.round(sec);
   const m = Math.floor(total / 60);
   const s = total % 60;
@@ -14,14 +14,14 @@ export function registerHeatmapTool(server: McpServer): void {
   server.registerTool(
     "get_video_heatmap",
     {
-      title: "Momentos más repetidos de un video de YouTube",
+      title: "Most replayed moments of a YouTube video",
       description:
-        "Devuelve los tramos del video que la audiencia más rebobina/repite (el 'most replayed' que YouTube " +
-        "muestra sobre la barra de progreso). Es la señal más directa para decidir qué cortar como short/reel: " +
-        "el tramo de mayor intensity es el momento que más engancha. best-effort: solo YouTube, y algunos videos " +
-        "(muy nuevos o con pocas vistas) no tienen suficiente data para generar el heatmap.",
+        "Returns the segments of the video the audience rewinds/replays the most (the 'most replayed' that YouTube " +
+        "shows over the progress bar). It's the most direct signal for deciding what to cut as a short/reel: " +
+        "the segment with the highest intensity is the moment that hooks the most. best-effort: YouTube only, and some videos " +
+        "(very new or with few views) don't have enough data to generate the heatmap.",
       inputSchema: {
-        url: z.string().url().describe("URL de un video individual de YouTube (no un canal)"),
+        url: z.string().url().describe("URL of an individual YouTube video (not a channel)"),
       },
     },
     async ({ url }) => {
@@ -30,7 +30,7 @@ export function registerHeatmapTool(server: McpServer): void {
         return json({
           error: "not_a_video",
           message:
-            "No es una URL de video individual de YouTube (watch/youtu.be/shorts/embed/live)",
+            "Not an individual YouTube video URL (watch/youtu.be/shorts/embed/live)",
         });
       }
       let points;
@@ -46,7 +46,7 @@ export function registerHeatmapTool(server: McpServer): void {
         return json({
           error: "no_heatmap",
           message:
-            "Este video no tiene suficiente data de heatmap todavía (muy nuevo o pocas vistas)",
+            "This video doesn't have enough heatmap data yet (too new or too few views)",
         });
       }
       const topMoments = [...points]
@@ -62,7 +62,7 @@ export function registerHeatmapTool(server: McpServer): void {
         url,
         totalSegments: points.length,
         topMoments,
-        hint: "El primer moment (mayor intensity) es el tramo que más rebobina la audiencia — buen candidato para cortar como short/reel",
+        hint: "The first moment (highest intensity) is the segment the audience rewinds the most — a good candidate for cutting as a short/reel",
       });
     },
   );

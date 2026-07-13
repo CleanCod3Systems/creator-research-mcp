@@ -1,7 +1,7 @@
 export interface RetryOptions {
   retries?: number;
   baseDelayMs?: number;
-  /** Solo reintentar si esto devuelve true (ej. 429/5xx sí, 401/404 no). Default: siempre. */
+  /** Only retry if this returns true (e.g. 429/5xx yes, 401/404 no). Default: always. */
   isRetryable?: (err: unknown) => boolean;
 }
 
@@ -10,9 +10,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Backoff exponencial simple para llamadas de red flaky (rate-limits, timeouts transitorios).
- * No reintenta errores que no van a cambiar con un retry (auth, 404, URL inválida) si
- * `isRetryable` los descarta explícitamente.
+ * Simple exponential backoff for flaky network calls (rate limits, transient timeouts).
+ * Does not retry errors that won't change on retry (auth, 404, invalid URL) when
+ * `isRetryable` explicitly rules them out.
  */
 export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}): Promise<T> {
   const retries = opts.retries ?? 2;
@@ -31,11 +31,11 @@ export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions = {}
   throw lastErr;
 }
 
-/** Heurística común: reintentar rate-limit/timeout/5xx, NO reintentar auth/404/URL inválida. */
+/** Common heuristic: retry rate-limit/timeout/5xx, do NOT retry auth/404/invalid URL. */
 export function isTransientHttpError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   if (/\b(401|403|404)\b/.test(msg)) return false;
-  if (/login|cookies|autenticaci[óo]n|no es una URL/i.test(msg)) return false;
+  if (/login|cookies|authentication|not a tweet url/i.test(msg)) return false;
   return (
     /\b(429|5\d\d)\b/.test(msg) || /timeout|timed out|ECONNRESET|ETIMEDOUT|fetch failed/i.test(msg)
   );

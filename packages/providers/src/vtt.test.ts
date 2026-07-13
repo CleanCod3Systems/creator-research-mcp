@@ -5,21 +5,21 @@ const SAMPLE = `WEBVTT
 Kind: captions
 
 00:00:01.000 --> 00:00:03.500
-hola <c>mundo</c>
+hello <c>world</c>
 
 00:00:03.500 --> 00:00:06.000
-hola mundo
+hello world
 
 00:00:06.000 --> 00:00:09.000
-esto es una prueba
-de subtítulos
+this is a caption
+test
 `;
 
 describe("parseVtt", () => {
-  it("parsea cues, limpia tags y deduplica rolling captions", () => {
+  it("parses cues, strips tags, and deduplicates rolling captions", () => {
     const segs = parseVtt(SAMPLE);
     expect(segs).toHaveLength(2);
-    expect(segs[0]).toMatchObject({ start: 1, end: 3.5, text: "hola mundo" });
-    expect(segs[1]?.text).toBe("esto es una prueba de subtítulos");
+    expect(segs[0]).toMatchObject({ start: 1, end: 3.5, text: "hello world" });
+    expect(segs[1]?.text).toBe("this is a caption test");
   });
 });

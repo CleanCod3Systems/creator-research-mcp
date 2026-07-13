@@ -7,17 +7,17 @@ import {
 } from "@creator-research/core";
 
 /**
- * Tool de introspección: qué puede y qué NO puede hacer este servidor.
- * Existe para que el LLM cliente nunca prometa capacidades inexistentes.
+ * Introspection tool: what this server can and can NOT do.
+ * Exists so the client LLM never promises capabilities that don't exist.
  */
 export function registerCapabilitiesTool(server: McpServer): void {
   server.registerTool(
     "capabilities",
     {
-      title: "Capacidades del servidor",
+      title: "Server capabilities",
       description:
-        "Lista los providers de contenido habilitados, su confiabilidad (stable/fragile/manual_only) " +
-        "y las limitaciones conocidas. Consultar ANTES de prometer análisis de una fuente.",
+        "Lists the enabled content providers, their reliability (stable/fragile/manual_only), " +
+        "and the known limitations. Check BEFORE promising analysis of a source.",
       inputSchema: {},
     },
     () => {
@@ -28,24 +28,24 @@ export function registerCapabilitiesTool(server: McpServer): void {
       );
       const payload = {
         server: "creator-research",
-        mode: "client-reasoning: este servidor trae datos (transcript, comments, stats); el análisis lo hace el LLM cliente",
+        mode: "client-reasoning: this server fetches data (transcript, comments, stats); the analysis is done by the client LLM",
         providers,
         youtubeApiKeyConfigured: Boolean(process.env.YOUTUBE_API_KEY),
         knownLimitations: [
-          "TikTok/Instagram/Twitter: extracción best-effort vía yt-dlp/FxTwitter; puede fallar si la plataforma cambia",
-          'Instagram con login/rate-limit: exportar cookies con YTDLP_EXTRA_ARGS="--cookies-from-browser chrome"',
-          "LinkedIn: solo posts/artículos públicos; con authwall no hay extracción posible",
-          "Twitter/X: solo tweets públicos individuales; perfiles y replies fuera de alcance",
-          "Contenido tras paywall/DRM: fuera de alcance por diseño",
-          "Videos sin subtítulos: no hay transcripción automática (sin worker/Whisper); usá otro contenido",
-          "Sin YOUTUBE_API_KEY: list_videos usa yt-dlp (vistas ok, sin likes exactos, a veces con null)",
-          "get_video_heatmap: best-effort, videos muy nuevos o con pocas vistas no tienen data suficiente",
-          "Instagram no tiene listado automático de perfil (yt-dlp: instagram:user está roto oficialmente) — " +
-            "usá get_transcript con 'urls' (batch) o import_profile_snapshot para datos manuales",
-          "get_metrics_history/velocityScore requieren al menos 2 mediciones en el tiempo sobre la misma URL " +
-            "(repetí list_videos/get_transcript); con una sola medición no hay ventana de tiempo, se explica en 'limitations'",
-          "analyze_creator/compare_creators son agregación determinista (medianas, frecuencias) — NO detectan " +
-            "hooks/CTA/narrativa por sí mismos, eso lo hace el LLM cliente leyendo get_transcript de los outliers",
+          "TikTok/Instagram/Twitter: best-effort extraction via yt-dlp/FxTwitter; can fail if the platform changes",
+          'Instagram with login/rate-limit: export cookies with YTDLP_EXTRA_ARGS="--cookies-from-browser chrome"',
+          "LinkedIn: public posts/articles only; no extraction possible behind an authwall",
+          "Twitter/X: individual public tweets only; profiles and replies are out of scope",
+          "Content behind paywall/DRM: out of scope by design",
+          "Videos without subtitles: no automatic transcription is available; try other content",
+          "Without YOUTUBE_API_KEY: list_videos uses yt-dlp (views are fine, no exact likes, sometimes null)",
+          "get_video_heatmap: best-effort, very new videos or ones with few views don't have enough data",
+          "Instagram has no automatic profile listing (yt-dlp: instagram:user is officially broken) — " +
+            "use get_transcript with 'urls' (batch) or import_profile_snapshot for manual data",
+          "get_metrics_history/velocityScore need at least 2 measurements over time on the same URL " +
+            "(repeat list_videos/get_transcript); with a single measurement there's no time window, explained in 'limitations'",
+          "analyze_creator/compare_creators are deterministic aggregation (medians, frequencies) — they do NOT detect " +
+            "hooks/CTA/narrative on their own, that's done by the client LLM reading get_transcript of the outliers",
         ],
       };
       return {

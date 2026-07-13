@@ -2,19 +2,19 @@ import { describe, expect, it } from "vitest";
 import { safeEqual } from "./http.js";
 
 describe("safeEqual", () => {
-  it("true si son idénticos", () => {
+  it("true when identical", () => {
     expect(safeEqual("mismo-token-123", "mismo-token-123")).toBe(true);
   });
 
-  it("false si difieren, incluso en un solo carácter", () => {
+  it("false when they differ, even by a single character", () => {
     expect(safeEqual("mismo-token-123", "mismo-token-124")).toBe(false);
   });
 
-  it("false si tienen distinta longitud (sin tirar excepción)", () => {
+  it("false when lengths differ (without throwing)", () => {
     expect(safeEqual("corto", "un-token-mucho-mas-largo")).toBe(false);
   });
 
-  it("false con string vacío contra un token real", () => {
+  it("false with an empty string against a real token", () => {
     expect(safeEqual("", "token-real")).toBe(false);
   });
 });

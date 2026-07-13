@@ -25,7 +25,7 @@ export type FacetKind = z.infer<typeof FacetKind>;
 export const FacetItem = z.object({
   value: z.string(),
   detail: z.string().optional(),
-  /** Referencia a la fuente: segundo del video o fragmento del texto. */
+  /** Reference to the source: video timestamp (seconds) or text fragment. */
   evidence: z
     .object({ timestampSec: z.number().optional(), quoteRef: z.string().optional() })
     .optional(),
@@ -33,7 +33,7 @@ export const FacetItem = z.object({
 });
 export type FacetItem = z.infer<typeof FacetItem>;
 
-/** Documento canónico versionado. JSON es la fuente de verdad; md/text son proyecciones. */
+/** Versioned canonical document. JSON is the source of truth; md/text are projections. */
 export const AnalysisDocument = z.object({
   schemaVersion: z.literal(1),
   contentHash: z.string(),

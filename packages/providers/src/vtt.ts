@@ -7,8 +7,8 @@ function toSec(h: string, m: string, s: string, ms: string): number {
 }
 
 /**
- * Parser de WebVTT enfocado en subtítulos de YouTube.
- * Los auto-captions repiten líneas en modo "rolling": se deduplican consecutivos.
+ * WebVTT parser focused on YouTube subtitles.
+ * Auto-captions repeat lines in "rolling" mode: consecutive duplicates are removed.
  */
 export function parseVtt(vtt: string): TranscriptSegment[] {
   const segments: TranscriptSegment[] = [];

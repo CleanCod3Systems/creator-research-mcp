@@ -7,10 +7,10 @@ export function registerGetAnalysisTool(server: McpServer): void {
   server.registerTool(
     "get_analysis",
     {
-      title: "Obtener un análisis",
+      title: "Get an analysis",
       description:
-        "Devuelve un análisis existente por analysisId o por url (busca el último análisis done de esa URL). " +
-        "sections filtra facetas; format: markdown (default) | json | text.",
+        "Returns an existing analysis by analysisId or by url (finds the latest done analysis for that URL). " +
+        "sections filters facets; format: markdown (default) | json | text.",
       inputSchema: {
         analysisId: z.number().int().positive().optional(),
         url: z.string().url().optional(),
@@ -27,14 +27,14 @@ export function registerGetAnalysisTool(server: McpServer): void {
       } else if (url) {
         doc = analysisRepo.getLatestDoneByHash(sourceHash({ type: "url", url }))?.document ?? null;
       } else {
-        return text(JSON.stringify({ error: "bad_request", message: "Pasá analysisId o url" }));
+        return text(JSON.stringify({ error: "bad_request", message: "Pass analysisId or url" }));
       }
 
       if (!doc) {
         return text(
           JSON.stringify({
             error: "not_found",
-            message: "No hay análisis done para esa referencia. ¿Corriste analyze primero?",
+            message: "No done analysis for that reference. Did you run analyze first?",
           }),
         );
       }

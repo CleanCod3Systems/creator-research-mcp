@@ -12,9 +12,10 @@ const TEXT_EXT = new Set([".md", ".txt", ".markdown"]);
 const MEDIA_EXT = new Set([".mp4", ".mp3", ".wav", ".m4a", ".webm", ".mkv", ".ogg"]);
 
 /**
- * Fallback universal: archivos del disco del SERVIDOR.
- * Texto (md/txt) → directo. Audio/video → Whisper.
- * Es la salida para LinkedIn, Instagram bloqueado, cursos propios, etc.
+ * Universal fallback: files on the SERVER's disk.
+ * Text (md/txt) → read directly. Media files match for metadata only (size, mtime) — there's
+ * no transcription in this server, so fetchText returns null for them and the caller gets an
+ * honest "no text available" instead of a fabricated transcript.
  */
 export class LocalFileProvider implements ContentProvider {
   readonly name = "localfile";
@@ -35,7 +36,6 @@ export class LocalFileProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: false,
-        mediaDownload: true,
         comments: false,
         channelListing: false,
       },
@@ -55,10 +55,5 @@ export class LocalFileProvider implements ContentProvider {
   fetchText(ref: string): Promise<TextPayload | null> {
     if (!TEXT_EXT.has(extname(ref).toLowerCase())) return Promise.resolve(null);
     return Promise.resolve({ text: readFileSync(ref, "utf8"), source: "native_text" });
-  }
-
-  /** Para media local no hay nada que descargar: el archivo YA es el media. */
-  fetchMedia(ref: string): Promise<string | null> {
-    return Promise.resolve(MEDIA_EXT.has(extname(ref).toLowerCase()) ? ref : null);
   }
 }

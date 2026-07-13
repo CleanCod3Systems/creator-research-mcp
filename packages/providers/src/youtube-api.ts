@@ -13,7 +13,7 @@ export interface YoutubeApiVideo {
   tags: string[];
 }
 
-/** "PT1H2M10S" → segundos. Formato ISO 8601 de duración que usa contentDetails.duration. */
+/** "PT1H2M10S" → seconds. ISO 8601 duration format used by contentDetails.duration. */
 export function isoDurationToSeconds(iso: string): number {
   const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
   if (!m) return 0;
@@ -35,7 +35,7 @@ async function apiGet(
       if (!res.ok) {
         const body = await res.text();
         throw new Error(
-          `YouTube Data API (${path}) respondió ${String(res.status)}: ${body.slice(0, 300)}`,
+          `YouTube Data API (${path}) responded ${String(res.status)}: ${body.slice(0, 300)}`,
         );
       }
       return res.json() as Promise<Record<string, unknown>>;
@@ -44,7 +44,7 @@ async function apiGet(
   );
 }
 
-/** Resuelve un canal (por @handle o channelId) a su playlist de "subidos" en UNA sola unidad de cuota. */
+/** Resolves a channel (by @handle or channelId) to its "uploads" playlist in a SINGLE quota unit. */
 export async function resolveUploadsPlaylistId(
   ref: { handle: string } | { channelId: string },
   apiKey: string,
@@ -59,11 +59,11 @@ export async function resolveUploadsPlaylistId(
     ?.relatedPlaylists as Record<string, unknown> | undefined;
   const playlistId = uploads?.uploads;
   if (typeof playlistId !== "string")
-    throw new Error("No se pudo resolver el canal vía YouTube Data API");
+    throw new Error("Could not resolve the channel via YouTube Data API");
   return playlistId;
 }
 
-/** IDs de video en orden de subida (más reciente primero), paginando de a 50. */
+/** Video IDs in upload order (most recent first), paginating 50 at a time. */
 export async function listUploadIds(
   playlistId: string,
   limit: number,
@@ -90,7 +90,7 @@ export async function listUploadIds(
   return ids.slice(0, limit);
 }
 
-/** Estadísticas exactas en lotes de 50 IDs (1 unidad de cuota por lote, sin importar cuántos videos). */
+/** Exact stats in batches of 50 IDs (1 quota unit per batch, regardless of how many videos). */
 export async function getVideosStats(ids: string[], apiKey: string): Promise<YoutubeApiVideo[]> {
   const out: YoutubeApiVideo[] = [];
   for (let i = 0; i < ids.length; i += 50) {
@@ -121,8 +121,8 @@ export async function getVideosStats(ids: string[], apiKey: string): Promise<You
 }
 
 /**
- * Trending oficial de YouTube (chart=mostPopular): qué está funcionando AHORA en una región/
- * categoría, más allá de un canal puntual. 1 unidad de cuota por lote de 50.
+ * Official YouTube trending (chart=mostPopular): what's working RIGHT NOW in a region/
+ * category, beyond a single channel. 1 quota unit per batch of 50.
  */
 export async function getTrendingVideos(
   regionCode: string,

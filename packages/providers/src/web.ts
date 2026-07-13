@@ -11,7 +11,7 @@ import { isTransientHttpError, withRetry } from "./retry.js";
 
 const UA = "Mozilla/5.0 (compatible; CreatorResearchMCP/0.4; +https://github.com)";
 
-/** Artículos, blogs y documentación estáticos. JS-rendered (Playwright): fase 2. */
+/** Static articles, blogs, and documentation. JS-rendered pages are out of scope. */
 export class WebProvider implements ContentProvider {
   readonly name = "web";
   private readonly cache = new Map<string, { title: string; text: string; byline?: string }>();
@@ -38,11 +38,10 @@ export class WebProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: false,
-        mediaDownload: false,
         comments: false,
         channelListing: false,
       },
-      legalNotes: "Solo contenido público; respeta el HTML servido (sin bypass de paywalls)",
+      legalNotes: "Public content only; respects served HTML (no paywall bypass)",
     };
   }
 
@@ -55,7 +54,7 @@ export class WebProvider implements ContentProvider {
           headers: { "user-agent": UA, accept: "text/html" },
           redirect: "follow",
         });
-        if (!res.ok) throw new Error(`HTTP ${String(res.status)} al obtener ${url}`);
+        if (!res.ok) throw new Error(`HTTP ${String(res.status)} fetching ${url}`);
         return res.text();
       },
       { isRetryable: isTransientHttpError },
@@ -68,9 +67,7 @@ export class WebProvider implements ContentProvider {
       byline: article?.byline ?? undefined,
     };
     if (!result.text)
-      throw new Error(
-        "No se pudo extraer contenido legible (¿página JS-rendered? Playwright llega en fase 2)",
-      );
+      throw new Error("Could not extract readable content (JS-rendered page not supported)");
     this.cache.set(url, result);
     return result;
   }
@@ -83,9 +80,5 @@ export class WebProvider implements ContentProvider {
   async fetchText(url: string): Promise<TextPayload | null> {
     const a = await this.extract(url);
     return { text: a.text, source: "native_text" };
-  }
-
-  fetchMedia(): Promise<string | null> {
-    return Promise.resolve(null);
   }
 }

@@ -48,7 +48,7 @@ const STOPWORDS = new Set([
   "with",
 ]);
 
-/** Frecuencia de palabras en títulos/captions — conteo literal, NO interpretación semántica. */
+/** Word frequency in titles/captions — literal counting, NOT semantic interpretation. */
 export function wordFrequency(texts: string[], topN = 15): { word: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const text of texts) {
@@ -64,7 +64,7 @@ export function wordFrequency(texts: string[], topN = 15): { word: string; count
     .map(([word, count]) => ({ word, count }));
 }
 
-/** Mediana de días entre publicaciones consecutivas. null si no hay al menos 2 fechas reales. */
+/** Median days between consecutive posts. null if there aren't at least 2 real dates. */
 export function publishFrequencyDays(publishedAtValues: (string | undefined)[]): {
   medianDaysBetweenPosts: number | null;
   sampleSize: number;
@@ -96,7 +96,7 @@ interface FormatPerformance {
   medianViews: number;
 }
 
-/** Performance por duración: puro agrupado + mediana, sin ningún juicio de calidad. */
+/** Performance by duration: pure grouping + median, no quality judgment whatsoever. */
 export function performanceByFormat(
   items: { durationSec?: number; viewCount?: number }[],
 ): FormatPerformance[] {
@@ -132,10 +132,10 @@ async function buildCreatorProfile(
   const { providers } = getContext();
   const provider = providers.find((p) => p.matches(url));
   if (!provider?.listItems) {
-    return { error: "unsupported_source", message: "Este provider no soporta listado de canales." };
+    return { error: "unsupported_source", message: "This provider doesn't support channel listing." };
   }
   const items = await provider.listItems(url, "recent", sampleSize);
-  if (items.length === 0) return { error: "empty_channel", message: "No se encontraron videos." };
+  if (items.length === 0) return { error: "empty_channel", message: "No videos found." };
 
   const views = items.map((i) => i.viewCount ?? 0);
   const durations = items.map((i) => i.durationSec ?? 0);
@@ -172,23 +172,23 @@ async function buildCreatorProfile(
 }
 
 /**
- * Agregador de datos determinista — CERO IA server-side. Trae una muestra del canal y calcula
- * estadísticas (mediana de vistas/duración, frecuencia de publicación, frecuencia de palabras
- * en títulos/tags, performance por formato). La interpretación real (hooks, CTAs, huecos de
- * contenido) le corresponde al LLM cliente sobre estos datos + los transcripts de los outliers.
+ * Deterministic data aggregator — ZERO server-side AI. Fetches a channel sample and computes
+ * statistics (median views/duration, publish frequency, word frequency in titles/tags,
+ * performance by format). The actual interpretation (hooks, CTAs, content gaps) is up to
+ * the client LLM working from this data + the transcripts of the outliers.
  */
 export function registerAnalyzeCreatorTool(server: McpServer): void {
   server.registerTool(
     "analyze_creator",
     {
-      title: "Perfil estadístico de un creador",
+      title: "Statistical profile of a creator",
       description:
-        "Trae una muestra del canal/perfil y calcula estadísticas deterministas: mediana de vistas/duración, " +
-        "frecuencia de publicación, palabras más repetidas en títulos/tags, performance por formato de " +
-        "duración, y los outliers (mejores/peores). CERO IA propia: es agregación de datos, no interpretación. " +
-        "Para hooks/CTA/narrativa reales, usá get_transcript sobre los topOutliers devueltos y analizalos vos.",
+        "Fetches a channel/profile sample and computes deterministic statistics: median views/duration, " +
+        "publish frequency, most repeated words in titles/tags, performance by duration format, and " +
+        "the outliers (best/worst). ZERO own AI: it's data aggregation, not interpretation. " +
+        "For real hooks/CTA/narrative, use get_transcript on the returned topOutliers and analyze them yourself.",
       inputSchema: {
-        url: z.string().url().describe("URL del canal/perfil"),
+        url: z.string().url().describe("Channel/profile URL"),
         sampleSize: z.number().int().min(5).max(50).default(20),
       },
     },
@@ -198,28 +198,28 @@ export function registerAnalyzeCreatorTool(server: McpServer): void {
       return json({
         ...profile,
         synthesisGuide:
-          "Con estos datos: 1) temas probables = titleKeywords, 2) formato que mejor funciona = " +
-          "performanceByFormat[0], 3) cadencia = publishFrequency. Para hooks/CTA/estructura narrativa " +
-          "reales, traé el transcript de topOutliers con get_transcript y analizalos en la conversación " +
-          "— este tool NO los infiere, solo señala qué videos vale la pena leer.",
+          "With this data: 1) likely topics = titleKeywords, 2) best-performing format = " +
+          "performanceByFormat[0], 3) cadence = publishFrequency. For real hooks/CTA/narrative " +
+          "structure, fetch the transcript of topOutliers with get_transcript and analyze them in the " +
+          "conversation — this tool does NOT infer them, it only flags which videos are worth reading.",
       });
     },
   );
 }
 
 /**
- * Compara 2-10 perfiles con las mismas estadísticas de analyze_creator, lado a lado.
- * Igual que analyze_creator: agregación determinista, la síntesis la hace el LLM cliente.
+ * Compares 2-10 profiles side by side using the same statistics as analyze_creator.
+ * Same as analyze_creator: deterministic aggregation, the client LLM does the synthesis.
  */
 export function registerCompareCreatorsTool(server: McpServer): void {
   server.registerTool(
     "compare_creators",
     {
-      title: "Comparar creadores",
+      title: "Compare creators",
       description:
-        "Compara 2-10 canales/perfiles lado a lado: vistas medianas, duración típica, cadencia de " +
-        "publicación, tags/keywords compartidos vs únicos, y qué formato de duración funciona mejor en cada " +
-        "uno. CERO IA propia — agregación determinista para que vos saques las conclusiones.",
+        "Compares 2-10 channels/profiles side by side: median views, typical duration, publish " +
+        "cadence, shared vs unique tags/keywords, and which duration format performs best for each " +
+        "one. ZERO own AI — deterministic aggregation so you draw the conclusions.",
       inputSchema: {
         urls: z.array(z.string().url()).min(2).max(10),
         sampleSize: z.number().int().min(5).max(50).default(15),
@@ -235,7 +235,7 @@ export function registerCompareCreatorsTool(server: McpServer): void {
       if (valid.length < 2) {
         return json({
           error: "insufficient_data",
-          message: "Se necesitan al menos 2 perfiles con datos válidos para comparar.",
+          message: "At least 2 profiles with valid data are needed to compare.",
           failed,
         });
       }
@@ -256,9 +256,9 @@ export function registerCompareCreatorsTool(server: McpServer): void {
         sharedTags,
         skipped: failed.length > 0 ? failed : undefined,
         synthesisGuide:
-          "Compará medianViews (quién rompe más) y publishFrequency (quién publica más seguido) primero. " +
-          "sharedTags = terreno en común; lo que NO comparten = diferenciación real de cada uno. " +
-          "Fortalezas/riesgos y nivel técnico los evaluás vos leyendo transcripts puntuales con get_transcript.",
+          "Compare medianViews (who performs best) and publishFrequency (who publishes most often) first. " +
+          "sharedTags = common ground; what they do NOT share = each one's real differentiation. " +
+          "You evaluate strengths/risks and technical level yourself by reading specific transcripts with get_transcript.",
       });
     },
   );

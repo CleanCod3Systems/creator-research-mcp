@@ -10,35 +10,35 @@ import { z } from "zod";
 import { getContext } from "../context.js";
 
 /**
- * Cierra el loop del modo client-reasoning: el LLM del cliente analizó el
- * transcript en la conversación y acá persiste las facetas estructuradas,
- * dejándolas disponibles para get_analysis, comparaciones y cursos futuros.
+ * Closes the loop of client-reasoning mode: the client LLM analyzed the
+ * transcript in the conversation and here persists the structured facets,
+ * making them available for get_analysis, comparisons, and future courses.
  */
 export function registerSaveAnalysisTool(server: McpServer): void {
   server.registerTool(
     "save_analysis",
     {
-      title: "Guardar análisis",
+      title: "Save analysis",
       description:
-        "Persiste un análisis hecho por vos (el LLM cliente) sobre un transcript obtenido con get_transcript. " +
-        "facets: objeto {facetKind: [{value, detail?, confidence?}]}. Kinds válidos: summary, conclusions, " +
+        "Persists an analysis you (the client LLM) made of a transcript obtained via get_transcript. " +
+        "facets: object {facetKind: [{value, detail?, confidence?}]}. Valid kinds: summary, conclusions, " +
         "technologies, frameworks, tools, code, best_practices, bad_practices, errors, architecture, level, " +
         "curriculum, questions, concepts, keywords, glossary, examples, steps. " +
-        "Queda consultable con get_analysis y alimenta comparaciones/cursos.",
+        "Becomes queryable via get_analysis and feeds comparisons/courses.",
       inputSchema: {
-        url: z.string().url().optional().describe("La misma URL usada en get_transcript"),
+        url: z.string().url().optional().describe("The same URL used in get_transcript"),
         filePath: z.string().optional(),
         facets: z.record(FacetKind, z.array(FacetItem)),
         analyzedBy: z
           .string()
           .default("client-llm")
-          .describe("Identificación del modelo que analizó"),
+          .describe("Identifier of the model that did the analysis"),
       },
     },
     ({ url, filePath, facets, analyzedBy }) => {
       const { config, content, analysisRepo } = getContext();
       if ((url ? 1 : 0) + (filePath ? 1 : 0) !== 1) {
-        return json({ error: "bad_request", message: "Pasá exactamente uno: url o filePath" });
+        return json({ error: "bad_request", message: "Pass exactly one: url or filePath" });
       }
       const source: SourceRef = url
         ? { type: "url", url }
@@ -49,7 +49,7 @@ export function registerSaveAnalysisTool(server: McpServer): void {
         return json({
           error: "content_not_found",
           message:
-            "Primero obtené el transcript con get_transcript(url) — eso registra el contenido.",
+            "First get the transcript with get_transcript(url) — that registers the content.",
         });
       }
       const item = content.getItem(contentItemId);
@@ -57,7 +57,7 @@ export function registerSaveAnalysisTool(server: McpServer): void {
       const doc = AnalysisDocument.parse({
         schemaVersion: 1,
         contentHash: hash,
-        title: item?.title ?? url ?? filePath ?? "sin título",
+        title: item?.title ?? url ?? filePath ?? "untitled",
         sourceUrl: url ?? undefined,
         provider: item?.provider ?? "unknown",
         language: item?.language ?? undefined,
@@ -72,7 +72,7 @@ export function registerSaveAnalysisTool(server: McpServer): void {
         status: "saved",
         analysisId,
         facetsStored: Object.entries(facets).map(([k, v]) => `${k}(${String(v.length)})`),
-        hint: "Recuperable con get_analysis(analysisId) o get_analysis(url)",
+        hint: "Retrievable via get_analysis(analysisId) or get_analysis(url)",
       });
     },
   );

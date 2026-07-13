@@ -4,21 +4,21 @@ import { z } from "zod";
 import { getContext, getMetricsRepo } from "../context.js";
 
 /**
- * Lee el historial de snapshots que fueron acumulando list_videos/get_transcript sobre esta
- * URL. Sin al menos 2 mediciones en momentos distintos no hay velocidad que calcular — y eso
- * se explica, nunca se inventa un número.
+ * Reads the history of snapshots that list_videos/get_transcript have been accumulating on
+ * this URL. Without at least 2 measurements at different times there's no velocity to compute — and that
+ * is explained, a number is never invented.
  */
 export function registerMetricsHistoryTool(server: McpServer): void {
   server.registerTool(
     "get_metrics_history",
     {
-      title: "Historial de métricas y velocidad de crecimiento",
+      title: "Metrics history and growth velocity",
       description:
-        "Devuelve los snapshots de vistas/likes/comments guardados para esta URL (por list_videos o " +
-        "get_transcript) y calcula viewsPerHour/viewsPerDay/engagementPerView/commentsPerLike reales entre " +
-        "el primer y el último snapshot. Necesita al menos 2 mediciones en momentos distintos — si solo hay " +
-        "una, lo dice explícitamente en vez de inventar una velocidad. Volvé a llamar list_videos/get_transcript " +
-        "sobre la misma URL en otro momento para acumular más historial.",
+        "Returns the views/likes/comments snapshots saved for this URL (via list_videos or " +
+        "get_transcript) and computes real viewsPerHour/viewsPerDay/engagementPerView/commentsPerLike between " +
+        "the first and the last snapshot. Needs at least 2 measurements at different times — if there's only " +
+        "one, it says so explicitly instead of inventing a velocity. Call list_videos/get_transcript again " +
+        "on the same URL at another time to accumulate more history.",
       inputSchema: {
         url: z.string().url(),
       },
@@ -31,7 +31,7 @@ export function registerMetricsHistoryTool(server: McpServer): void {
         return json({
           error: "no_history",
           message:
-            "Nunca se pidió esta URL con list_videos o get_transcript — no hay ningún snapshot todavía.",
+            "This URL was never requested with list_videos or get_transcript — there's no snapshot yet.",
         });
       }
       const item = content.getItem(contentItemId);
@@ -50,8 +50,8 @@ export function registerMetricsHistoryTool(server: McpServer): void {
         growth,
         hint:
           growth.sampleSize < 2
-            ? "Con un solo snapshot no hay ventana de tiempo para medir velocidad. Volvé a pedir list_videos/get_transcript de esta URL más adelante."
-            : "growth.limitations explica cualquier campo en null (nunca se calcula una tasa sin denominador real).",
+            ? "With a single snapshot there's no time window to measure velocity. Request list_videos/get_transcript for this URL again later."
+            : "growth.limitations explains any field set to null (a rate is never computed without a real denominator).",
       });
     },
   );

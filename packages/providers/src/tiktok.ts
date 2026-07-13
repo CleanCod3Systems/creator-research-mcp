@@ -7,11 +7,11 @@ import type {
   TextPayload,
 } from "@creator-research/core";
 import { textFromInfo } from "./subtitles.js";
-import { downloadAudio, dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
+import { dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 
 const HOSTS = ["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"];
 
-/** Videos y perfiles de TikTok vía yt-dlp. Extractor no oficial: puede romperse sin aviso. */
+/** TikTok videos and profiles via yt-dlp. Unofficial extractor: can break without warning. */
 export class TikTokProvider implements ContentProvider {
   readonly name = "tiktok";
   private readonly infoCache = new Map<string, YtDlpInfo>();
@@ -27,7 +27,7 @@ export class TikTokProvider implements ContentProvider {
   classify(url: string): ContentKind {
     const u = new URL(url);
     if (/^\/@[^/]+\/?$/.test(u.pathname)) return "channel";
-    // /@user/video/123, /@user/photo/123 y links cortos vm/vt.tiktok.com
+    // /@user/video/123, /@user/photo/123 and short links vm/vt.tiktok.com
     return "short";
   }
 
@@ -37,11 +37,10 @@ export class TikTokProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: true,
-        mediaDownload: true,
         comments: false,
         channelListing: true,
       },
-      legalNotes: "Extractor no oficial (yt-dlp); solo contenido público",
+      legalNotes: "Unofficial extractor (yt-dlp); public content only",
     };
   }
 
@@ -76,12 +75,7 @@ export class TikTokProvider implements ContentProvider {
     return textFromInfo(await this.info(url));
   }
 
-  async fetchMedia(url: string, destDir: string): Promise<string | null> {
-    const info = await this.info(url);
-    return downloadAudio(url, destDir, info.id);
-  }
-
-  /** Lista videos de un perfil @user. strategy top = por vistas; recent = orden del perfil. */
+  /** Lists videos from an @user profile. strategy top = by views; recent = profile order. */
   async listItems(url: string, strategy: "top" | "recent", n: number): Promise<ChannelItem[]> {
     const fetchLimit = strategy === "top" ? Math.max(n * 5, 30) : n;
     const entries = await dumpFlatPlaylist(url, fetchLimit);

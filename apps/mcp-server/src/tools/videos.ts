@@ -4,28 +4,28 @@ import { z } from "zod";
 import { getContext, getMetricsRepo } from "../context.js";
 
 /**
- * Modo client-reasoning: estadísticas de canal SIN worker ni IA propia.
- * Devuelve los videos con vistas/duración para que el LLM cliente decida
- * cuáles vale la pena analizar con get_transcript. Cada llamado registra un snapshot
- * histórico por video (ver get_metrics_history) para poder medir crecimiento en el tiempo.
+ * Client-reasoning mode: deterministic channel statistics, no AI of its own.
+ * Returns the videos with views/duration so the client LLM decides
+ * which ones are worth analyzing with get_transcript. Each call records a historical
+ * snapshot per video (see get_metrics_history) to measure growth over time.
  */
 export function registerListVideosTool(server: McpServer): void {
   server.registerTool(
     "list_videos",
     {
-      title: "Listar videos de un canal con estadísticas",
+      title: "List a channel's videos with statistics",
       description:
-        "Lista los videos de un canal/perfil (YouTube, TikTok) con vistas, duración y outlier " +
-        "(mediana+MAD del listado, no solo promedio — un score > 3 es señal fuerte de qué replicar), SIN " +
-        "análisis de IA ni worker. strategy=top ordena por vistas; recent por fecha. Con YOUTUBE_API_KEY " +
-        "configurada, además trae likes/comments exactos y tags (SEO). Cada llamado guarda un snapshot " +
-        "histórico por video — repetí este llamado en el tiempo y usá get_metrics_history para ver " +
-        "crecimiento. Flujo recomendado: list_videos → elegir los outliers/top → get_transcript de cada uno.",
+        "Lists the videos of a channel/profile (YouTube, TikTok) with views, duration, and outlier " +
+        "(median+MAD of the listing, not just average — a score > 3 is a strong signal of what to replicate), " +
+        "with no AI analysis involved. strategy=top sorts by views; recent by date. With YOUTUBE_API_KEY " +
+        "configured, it also fetches exact likes/comments and tags (SEO). Each call saves a historical " +
+        "snapshot per video — repeat this call over time and use get_metrics_history to see " +
+        "growth. Recommended flow: list_videos → pick the outliers/top → get_transcript for each one.",
       inputSchema: {
         url: z
           .string()
           .url()
-          .describe("URL del canal/perfil, ej. https://www.youtube.com/@usuario"),
+          .describe("Channel/profile URL, e.g. https://www.youtube.com/@user"),
         strategy: z.enum(["top", "recent"]).default("top"),
         limit: z.number().int().min(1).max(50).default(15),
       },
@@ -36,7 +36,7 @@ export function registerListVideosTool(server: McpServer): void {
       if (!provider?.listItems) {
         return json({
           error: "unsupported_source",
-          hint: "Este provider no soporta listado de canales. Consultá capabilities.",
+          hint: "This provider doesn't support channel listing. Check capabilities.",
         });
       }
       const items = await provider.listItems(url, strategy, limit);
@@ -71,22 +71,22 @@ export function registerListVideosTool(server: McpServer): void {
         sampleSize: items.length,
         videos,
         hint:
-          "outlierRatio/outlierScore se calculan SOLO sobre este listado (los N videos pedidos), no sobre " +
-          "todo el historial del canal — para una baseline más representativa, pedí antes strategy=recent " +
-          "con un limit alto. outlierScore usa mediana+MAD (robusto a un solo viral, a diferencia del " +
-          "promedio); si sampleSize es chico, outlierConfidence baja aunque el score sea alto. " +
-          "Analizá los patrones (títulos/temas/tags/duración vs vistas) y usá get_transcript en los que " +
-          "destaquen. Este llamado guardó un snapshot de métricas por video: repetilo en el tiempo y usá " +
-          "get_metrics_history(url) para ver viewsPerDay/engagementPerView reales, no estimados.",
+          "outlierRatio/outlierScore are calculated ONLY over this listing (the N videos requested), not over " +
+          "the channel's entire history — for a more representative baseline, request strategy=recent first " +
+          "with a high limit. outlierScore uses median+MAD (robust to a single viral hit, unlike the " +
+          "average); if sampleSize is small, outlierConfidence is low even if the score is high. " +
+          "Analyze the patterns (titles/topics/tags/duration vs views) and use get_transcript on the ones that " +
+          "stand out. This call saved a metrics snapshot per video: repeat it over time and use " +
+          "get_metrics_history(url) to see real viewsPerDay/engagementPerView, not estimated.",
       });
     },
   );
 }
 
 /**
- * list_videos trae stats livianas (sin metadata completa); igual conviene registrar el
- * snapshot para poder medir crecimiento — si falla (provider no reconoce la URL, etc.) no
- * tira abajo el listado completo, solo esa métrica queda sin historial.
+ * list_videos fetches lightweight stats (without full metadata); still worth recording the
+ * snapshot to measure growth — if it fails (provider doesn't recognize the URL, etc.) it
+ * doesn't bring down the whole listing, only that metric is left without history.
  */
 function recordSnapshotSafe(
   content: ReturnType<typeof getContext>["content"],
@@ -125,7 +125,7 @@ function recordSnapshotSafe(
       providerName,
     );
   } catch {
-    // best-effort: el listado en sí no depende de que el snapshot se guarde
+    // best-effort: the listing itself doesn't depend on the snapshot being saved
   }
 }
 

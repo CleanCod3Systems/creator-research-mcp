@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 /**
- * Resuelve un archivo de config buscando en CONFIG_DIR, cwd/config y ../../config
- * (permite correr desde la raíz del monorepo o desde apps/*).
+ * Resolves a config file by searching CONFIG_DIR, cwd/config and ../../config
+ * (allows running from the monorepo root or from apps/*).
  */
 export function resolveConfigPath(fileName: string): string {
   const bases = [
@@ -15,10 +15,10 @@ export function resolveConfigPath(fileName: string): string {
     const candidate = resolve(base, fileName);
     if (existsSync(candidate)) return candidate;
   }
-  throw new Error(`No se encontró ${fileName} (buscado en: ${bases.join(", ")})`);
+  throw new Error(`Could not find ${fileName} (searched in: ${bases.join(", ")})`);
 }
 
-/** Variante que devuelve null en vez de tirar (para usar defaults embebidos). */
+/** Variant that returns null instead of throwing (for use with embedded defaults). */
 export function resolveConfigPathOrNull(fileName: string): string | null {
   try {
     return resolveConfigPath(fileName);
@@ -27,7 +27,7 @@ export function resolveConfigPathOrNull(fileName: string): string | null {
   }
 }
 
-/** Expande ~ al home del usuario. */
+/** Expands ~ to the user's home directory. */
 export function expandHome(p: string): string {
   return p.startsWith("~/") || p === "~"
     ? p.replace(/^~/, process.env.HOME ?? process.env.USERPROFILE ?? ".")

@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 const YTDLP_BIN = process.env.YTDLP_PATH ?? "yt-dlp";
-/** Args extra p/ entornos especiales (proxy corporativo, cookies): "--no-check-certificates" etc. */
+/** Extra args for special environments (corporate proxy, cookies): "--no-check-certificates" etc. */
 const EXTRA_ARGS = (process.env.YTDLP_EXTRA_ARGS ?? "").split(" ").filter(Boolean);
 const TIMEOUT_MS = 60_000;
 
@@ -43,39 +43,9 @@ export async function dumpInfo(url: string): Promise<YtDlpInfo> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("ENOENT")) {
-      throw new Error("yt-dlp no está instalado o no está en PATH (o definí YTDLP_PATH)");
+      throw new Error("yt-dlp is not installed or not on PATH (or set YTDLP_PATH)");
     }
-    throw new Error(`yt-dlp falló para ${url}: ${msg.slice(0, 500)}`);
-  }
-}
-
-/** Descarga solo el audio como wav 16 kHz mono (formato que espera Whisper). Requiere ffmpeg. */
-export async function downloadAudio(url: string, destDir: string, id: string): Promise<string> {
-  const outPath = `${destDir}/${id}.wav`;
-  try {
-    await exec(
-      YTDLP_BIN,
-      [
-        ...EXTRA_ARGS,
-        "-f",
-        "bestaudio/best",
-        "-x",
-        "--audio-format",
-        "wav",
-        "--postprocessor-args",
-        "ffmpeg:-ar 16000 -ac 1",
-        "--no-warnings",
-        "--no-playlist",
-        "-o",
-        `${destDir}/${id}.%(ext)s`,
-        url,
-      ],
-      { timeout: 300_000, maxBuffer: 16 * 1024 * 1024 },
-    );
-    return outPath;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Descarga de audio falló (¿ffmpeg instalado?): ${msg.slice(0, 400)}`);
+    throw new Error(`yt-dlp failed for ${url}: ${msg.slice(0, 500)}`);
   }
 }
 
@@ -87,7 +57,7 @@ export interface FlatEntry {
   view_count?: number | null;
 }
 
-/** Lista los videos de un canal/playlist SIN descargarlos (rápido). */
+/** Lists videos from a channel/playlist WITHOUT downloading them (fast). */
 export async function dumpFlatPlaylist(url: string, limit: number): Promise<FlatEntry[]> {
   const { stdout } = await exec(
     YTDLP_BIN,
@@ -115,7 +85,7 @@ interface YtRawComment {
   timestamp?: number | null;
 }
 
-/** Comentarios vía yt-dlp (sin API key). comment_sort=top prioriza los relevantes. */
+/** Comments via yt-dlp (no API key). comment_sort=top prioritizes relevant ones. */
 export async function dumpComments(url: string, max: number): Promise<YtRawComment[]> {
   const { stdout } = await exec(
     YTDLP_BIN,

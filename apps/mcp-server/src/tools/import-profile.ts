@@ -4,28 +4,28 @@ import { z } from "zod";
 import { getContext, getMetricsRepo, getProfileRepo } from "../context.js";
 
 /**
- * Sin scraping agresivo de perfiles (Instagram no lo permite de forma confiable, ver
- * capabilities): el usuario pega a mano lo que ya ve en su navegador — followers, posts,
- * likes/comments de cada reel — y esto lo persiste con fecha real para poder medir
- * crecimiento en el tiempo con get_metrics_history, igual que si viniera de una API.
+ * No aggressive profile scraping (Instagram doesn't allow it reliably, see
+ * capabilities): the user pastes by hand what they already see in their browser — followers, posts,
+ * likes/comments of each reel — and this persists it with a real date so growth can be
+ * measured over time with get_metrics_history, just as if it came from an API.
  */
 export function registerImportProfileSnapshotTool(server: McpServer): void {
   server.registerTool(
     "import_profile_snapshot",
     {
-      title: "Importar snapshot manual de un perfil",
+      title: "Import manual profile snapshot",
       description:
-        "Registra una medición manual de un perfil (Instagram, TikTok, o cualquier plataforma sin listado " +
-        "automático): followers, cantidad de posts, y por cada post su url/likes/comments/views. Usalo " +
-        "cuando list_videos no soporte el perfil (ej. Instagram) — pegá lo que ves en el navegador. Con " +
-        "capturas repetidas en el tiempo, get_metrics_history calcula crecimiento real, igual que con datos " +
-        "de una API. NUNCA se extraen cookies ni se saltea login: esto es 100% aporte manual del usuario.",
+        "Records a manual measurement of a profile (Instagram, TikTok, or any platform without automatic " +
+        "listing): followers, post count, and for each post its url/likes/comments/views. Use it " +
+        "when list_videos doesn't support the profile (e.g. Instagram) — paste what you see in the browser. With " +
+        "repeated captures over time, get_metrics_history computes real growth, just as with data " +
+        "from an API. Cookies are NEVER extracted and login is NEVER bypassed: this is 100% manual user input.",
       inputSchema: {
-        platform: z.string().describe("ej. instagram, tiktok"),
+        platform: z.string().describe("e.g. instagram, tiktok"),
         profileUrl: z.string().url(),
-        handle: z.string().describe("ej. juliacardoso.dev"),
+        handle: z.string().describe("e.g. juliacardoso.dev"),
         name: z.string().optional(),
-        capturedAt: z.string().datetime().optional().describe("ISO 8601; default ahora"),
+        capturedAt: z.string().datetime().optional().describe("ISO 8601; defaults to now"),
         followers: z.number().int().nonnegative().optional(),
         postsCount: z.number().int().nonnegative().optional(),
         posts: z
@@ -95,9 +95,9 @@ export function registerImportProfileSnapshotTool(server: McpServer): void {
         postsImported: importedPosts.length,
         posts: importedPosts,
         hint:
-          "Repetí este import más adelante con datos frescos de los mismos posts para poder calcular " +
-          "crecimiento real con get_metrics_history(url). Nota: las métricas de perfiles ajenos en " +
-          "Instagram/TikTok pueden estar incompletas porque no hay API que las traiga automáticamente.",
+          "Repeat this import later with fresh data on the same posts to be able to compute " +
+          "real growth with get_metrics_history(url). Note: metrics for third-party profiles on " +
+          "Instagram/TikTok may be incomplete because there's no API that fetches them automatically.",
       });
     },
   );

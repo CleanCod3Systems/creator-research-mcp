@@ -7,11 +7,11 @@ import type {
   TextPayload,
 } from "@creator-research/core";
 import { textFromInfo } from "./subtitles.js";
-import { downloadAudio, dumpComments, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
+import { dumpComments, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 
 const HOSTS = ["instagram.com", "www.instagram.com", "m.instagram.com"];
 
-/** Reels y posts de Instagram vía yt-dlp. Contenido con login requiere cookies del navegador. */
+/** Instagram reels and posts via yt-dlp. Content requiring login needs browser cookies. */
 export class InstagramProvider implements ContentProvider {
   readonly name = "instagram";
   private readonly infoCache = new Map<string, YtDlpInfo>();
@@ -40,12 +40,11 @@ export class InstagramProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: false,
-        mediaDownload: true,
         comments: true,
         channelListing: false,
       },
       legalNotes:
-        'Contenido privado o con rate-limit requiere cookies: YTDLP_EXTRA_ARGS="--cookies-from-browser chrome"',
+        'Private or rate-limited content requires cookies: YTDLP_EXTRA_ARGS="--cookies-from-browser chrome"',
     };
   }
 
@@ -60,9 +59,9 @@ export class InstagramProvider implements ContentProvider {
       const msg = err instanceof Error ? err.message : String(err);
       if (/login|cookies|rate.?limit|401|403|not available/i.test(msg)) {
         throw new Error(
-          "Instagram exige autenticación para este contenido. " +
-            'Exportá cookies del navegador con YTDLP_EXTRA_ARGS="--cookies-from-browser chrome" ' +
-            `(o firefox/safari) y reintentá. Detalle: ${msg.slice(0, 300)}`,
+          "Instagram requires authentication for this content. " +
+            'Export browser cookies with YTDLP_EXTRA_ARGS="--cookies-from-browser chrome" ' +
+            `(or firefox/safari) and retry. Detail: ${msg.slice(0, 300)}`,
         );
       }
       throw err;
@@ -89,9 +88,9 @@ export class InstagramProvider implements ContentProvider {
   }
 
   /**
-   * Instagram casi nunca expone subtítulos. En vez de devolver null (que antes descartaba
-   * silenciosamente el caption real del post), se usa el caption como texto nativo: en Instagram
-   * el caption ES el copy/contenido — CTAs, contexto, lo que "vende" — no una nota al margen.
+   * Instagram almost never exposes subtitles. Instead of returning null (which used to silently
+   * discard the post's actual caption), the caption is used as native text: on Instagram
+   * the caption IS the copy/content — CTAs, context, what "sells" — not a marginal note.
    */
   async fetchText(url: string): Promise<TextPayload | null> {
     const subs = await textFromInfo(await this.info(url));
@@ -105,18 +104,13 @@ export class InstagramProvider implements ContentProvider {
     };
   }
 
-  async fetchMedia(url: string, destDir: string): Promise<string | null> {
-    const info = await this.info(url);
-    return downloadAudio(url, destDir, info.id);
-  }
-
   async fetchComments(url: string, limit: number): Promise<SourceComment[]> {
     const raw = await dumpComments(url, limit);
     return raw
       .filter((c) => c.text)
       .slice(0, limit)
       .map((c) => ({
-        author: c.author ?? "anónimo",
+        author: c.author ?? "anonymous",
         text: c.text ?? "",
         likes: c.like_count ?? undefined,
         parentId: c.parent && c.parent !== "root" ? c.parent : undefined,

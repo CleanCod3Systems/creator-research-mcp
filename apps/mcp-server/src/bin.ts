@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Binario publicado en npm. Modos:
+ * Binary published on npm. Modes:
  *   creator-research-mcp            → stdio (Claude Desktop, Cursor, Claude Code)
- *   creator-research-mcp http       → Streamable HTTP :3333 (ChatGPT vía túnel)
+ *   creator-research-mcp http       → Streamable HTTP :3333 (ChatGPT via tunnel)
  */
 import { config as loadEnv } from "dotenv";
 
-// silent: true porque en modo stdio no hay que escribir nada a stdout (rompe el protocolo MCP)
+// quiet: true because in stdio mode nothing must be written to stdout (breaks the MCP protocol)
 loadEnv({ quiet: true });
 
 const mode = process.argv[2] ?? "stdio";
@@ -24,12 +24,12 @@ async function run(): Promise<void> {
       break;
     }
     default:
-      console.error(`Modo desconocido: ${mode}. Usar: stdio | http`);
+      console.error(`Unknown mode: ${mode}. Use: stdio | http`);
       process.exit(1);
   }
 }
 
 run().catch((err: unknown) => {
-  console.error("[creator-research] error fatal:", err);
+  console.error("[creator-research] fatal error:", err);
   process.exit(1);
 });

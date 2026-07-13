@@ -7,19 +7,13 @@ import type {
   ProviderCapabilities,
   TextPayload,
 } from "@creator-research/core";
-import {
-  downloadAudio,
-  dumpComments,
-  dumpFlatPlaylist,
-  dumpInfo,
-  type YtDlpInfo,
-} from "./ytdlp.js";
+import { dumpComments, dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 import { textFromInfo } from "./subtitles.js";
 import { getVideosStats, listUploadIds, resolveUploadsPlaylistId } from "./youtube-api.js";
 
 const HOSTS = ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"];
 
-// paths de un solo segmento que NO son un canal vanity (/watch, /results, etc)
+// single-segment paths that are NOT a vanity channel (/watch, /results, etc)
 const RESERVED_PATH_SEGMENTS = new Set([
   "watch",
   "shorts",
@@ -39,7 +33,7 @@ const RESERVED_PATH_SEGMENTS = new Set([
   "post",
 ]);
 
-// pestañas válidas de un canal: /@handle/videos, /c/nombre/streams, etc
+// valid channel tabs: /@handle/videos, /c/name/streams, etc
 const CHANNEL_TABS = new Set([
   "videos",
   "shorts",
@@ -54,19 +48,19 @@ const CHANNEL_TABS = new Set([
 const CHANNEL_PREFIX_RE = /^\/(@[^/]+|channel\/[^/]+|c\/[^/]+|user\/[^/]+)/i;
 
 /**
- * YouTube tiene 4 formatos de URL de canal con prefijo (/@handle, /channel/UCxxx, /c/Nombre,
- * /user/Nombre) MÁS el legacy sin prefijo (/Nombre, ej. youtube.com/midudev), cualquiera de
- * ellos con o sin una pestaña al final (/videos, /streams, /about...). El legacy es ambiguo con
- * cualquier path de 1-2 segmentos, así que se excluyen youtu.be (ahí /xxx SIEMPRE es video) y
- * los paths reservados de YouTube (/watch, /results, /embed, etc).
+ * YouTube has 4 prefixed channel URL formats (/@handle, /channel/UCxxx, /c/Name,
+ * /user/Name) PLUS the legacy unprefixed one (/Name, e.g. youtube.com/midudev), any of
+ * them with or without a trailing tab (/videos, /streams, /about...). The legacy format is
+ * ambiguous with any 1-2 segment path, so youtu.be is excluded (there /xxx is ALWAYS a video)
+ * along with YouTube's reserved paths (/watch, /results, /embed, etc).
  */
 function isChannelPath(hostname: string, pathname: string): boolean {
   if (hostname === "youtu.be") return false;
   if (CHANNEL_PREFIX_RE.test(pathname)) return true;
   const [first, second, ...rest] = pathname.split("/").filter(Boolean);
   if (!first || RESERVED_PATH_SEGMENTS.has(first.toLowerCase())) return false;
-  if (!second) return true; // /nombre
-  return rest.length === 0 && CHANNEL_TABS.has(second.toLowerCase()); // /nombre/videos
+  if (!second) return true; // /name
+  return rest.length === 0 && CHANNEL_TABS.has(second.toLowerCase()); // /name/videos
 }
 
 export class YouTubeProvider implements ContentProvider {
@@ -82,26 +76,26 @@ export class YouTubeProvider implements ContentProvider {
   }
 
   /**
-   * Nunca cae en un default silencioso: si ningún formato conocido matchea, tira error
-   * explícito en vez de asumir "video" (así se detectó en su momento el bug de /midudev).
+   * Never falls back to a silent default: if no known format matches, it throws an
+   * explicit error instead of assuming "video" (this is how the /midudev bug was caught).
    */
   classify(url: string): ContentKind {
     const u = new URL(url);
     const hostname = u.hostname.toLowerCase();
     const pathname = u.pathname;
 
-    if (hostname === "youtu.be") return "video"; // youtu.be/<id> es siempre un video
+    if (hostname === "youtu.be") return "video"; // youtu.be/<id> is always a video
     if (pathname.startsWith("/shorts/")) return "short";
     if (pathname === "/watch" || pathname.startsWith("/embed/") || pathname.startsWith("/v/"))
       return "video";
-    if (/^\/live\/[^/]+$/.test(pathname)) return "video"; // waiting-room de un directo puntual
+    if (/^\/live\/[^/]+$/.test(pathname)) return "video"; // waiting room for a specific livestream
     if (pathname === "/playlist") return "playlist";
     if (isChannelPath(hostname, pathname)) return "channel";
 
     throw new Error(
-      `No reconozco el formato de esta URL de YouTube (${pathname}). Formatos soportados: ` +
+      `Unrecognized YouTube URL format (${pathname}). Supported formats: ` +
         "video (/watch, youtu.be/ID, /embed/ID, /live/ID), short (/shorts/ID), " +
-        "canal (/@handle, /channel/ID, /c/nombre, /user/nombre, o vanity legacy /nombre) y playlist (/playlist).",
+        "channel (/@handle, /channel/ID, /c/name, /user/name, or legacy vanity /name), and playlist (/playlist).",
     );
   }
 
@@ -111,7 +105,6 @@ export class YouTubeProvider implements ContentProvider {
       supports: {
         metadata: true,
         subtitles: true,
-        mediaDownload: true,
         comments: true,
         channelListing: true,
       },
@@ -145,14 +138,9 @@ export class YouTubeProvider implements ContentProvider {
     };
   }
 
-  /** Prioridad: subs manuales > auto-captions. Idioma: el del video > es > en > primero. */
+  /** Priority: manual subs > auto-captions. Language: video's own > es > en > first available. */
   async fetchText(url: string): Promise<TextPayload | null> {
     return textFromInfo(await this.info(url));
-  }
-
-  async fetchMedia(url: string, destDir: string): Promise<string | null> {
-    const info = await this.info(url);
-    return downloadAudio(url, destDir, info.id);
   }
 
   async fetchComments(url: string, limit: number): Promise<SourceComment[]> {
@@ -160,7 +148,7 @@ export class YouTubeProvider implements ContentProvider {
     return raw
       .filter((c) => c.text)
       .map((c) => ({
-        author: c.author ?? "anónimo",
+        author: c.author ?? "anonymous",
         text: c.text ?? "",
         likes: c.like_count ?? undefined,
         parentId: c.parent && c.parent !== "root" ? c.parent : undefined,
@@ -168,7 +156,7 @@ export class YouTubeProvider implements ContentProvider {
       }));
   }
 
-  /** Lista videos del canal: strategy recent = orden de subida; top = por vistas. */
+  /** Lists channel videos: strategy recent = upload order; top = by views. */
   async listItems(url: string, strategy: "top" | "recent", n: number): Promise<ChannelItem[]> {
     const u = new URL(url);
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -178,15 +166,15 @@ export class YouTubeProvider implements ContentProvider {
         try {
           return await this.listItemsViaApi(ref, strategy, n, apiKey);
         } catch {
-          // key inválida, cuota agotada, canal no resoluble por este método: fallback silencioso a yt-dlp
+          // invalid key, quota exhausted, channel not resolvable by this method: silent fallback to yt-dlp
         }
       }
     }
-    // canal sin tab → tab /videos (uploads); playlists quedan como están
+    // channel without a tab → /videos tab (uploads); playlists stay as-is
     const isChannel = isChannelPath(u.hostname.toLowerCase(), u.pathname);
     const hasTab = /\/(videos|shorts|streams)$/.test(u.pathname);
     const target = isChannel && !hasTab ? `${url.replace(/\/$/, "")}/videos` : url;
-    // para "top" pedimos más entradas y ordenamos por vistas
+    // for "top" we request more entries and sort by views
     const fetchLimit = strategy === "top" ? Math.max(n * 5, 30) : n;
     const entries = await dumpFlatPlaylist(target, fetchLimit);
     const items: ChannelItem[] = entries
@@ -201,7 +189,7 @@ export class YouTubeProvider implements ContentProvider {
     return items.slice(0, n);
   }
 
-  /** Solo /@handle y /channel/ID: los dos formatos que la API resuelve directo, sin ambigüedad. */
+  /** Only /@handle and /channel/ID: the two formats the API resolves directly, unambiguously. */
   private apiChannelRef(u: URL): { handle: string } | { channelId: string } | null {
     const channelId = /^\/channel\/([^/]+)/.exec(u.pathname)?.[1];
     if (channelId) return { channelId };
