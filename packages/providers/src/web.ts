@@ -5,7 +5,7 @@ import type {
   ContentProvider,
   ProviderCapabilities,
   TextPayload,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { JSDOM, VirtualConsole } from "jsdom";
 import { isTransientHttpError, withRetry } from "./retry.js";
 

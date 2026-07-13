@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getTrendingVideos } from "@creator-research/providers";
+import { getTrendingVideos } from "@cleancod3/providers";
 import { z } from "zod";
 
 /**

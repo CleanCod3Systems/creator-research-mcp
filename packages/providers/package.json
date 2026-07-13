@@ -1,5 +1,5 @@
 {
-  "name": "@creator-research/providers",
+  "name": "@cleancod3/providers",
   "version": "0.1.0",
   "private": false,
   "type": "module",
@@ -17,7 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@creator-research/core": "workspace:*",
+    "@cleancod3/core": "workspace:*",
     "@mozilla/readability": "^0.5.0",
     "jsdom": "^25.0.1",
     "unpdf": "^0.12.1"

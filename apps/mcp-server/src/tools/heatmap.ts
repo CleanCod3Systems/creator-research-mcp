@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { extractYoutubeVideoId, fetchMostReplayedHeatmap } from "@creator-research/providers";
+import { extractYoutubeVideoId, fetchMostReplayedHeatmap } from "@cleancod3/providers";
 import { z } from "zod";
 
 export function formatTimestamp(sec: number): string {

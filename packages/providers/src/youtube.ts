@@ -6,7 +6,7 @@ import type {
   ContentProvider,
   ProviderCapabilities,
   TextPayload,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { dumpComments, dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 import { textFromInfo } from "./subtitles.js";
 import { getVideosStats, listUploadIds, resolveUploadsPlaylistId } from "./youtube-api.js";

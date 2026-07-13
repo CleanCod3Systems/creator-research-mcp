@@ -4,7 +4,7 @@ import type {
   ContentProvider,
   ProviderCapabilities,
   TextPayload,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, extname } from "node:path";
 

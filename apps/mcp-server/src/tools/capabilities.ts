@@ -4,7 +4,7 @@ import {
   ProvidersFile,
   loadYamlConfigOrDefault,
   resolveConfigPathOrNull,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 
 /**
  * Introspection tool: what this server can and can NOT do.

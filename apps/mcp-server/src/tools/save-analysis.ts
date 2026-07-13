@@ -5,7 +5,7 @@ import {
   FacetKind,
   sourceHash,
   type SourceRef,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { z } from "zod";
 import { getContext } from "../context.js";
 

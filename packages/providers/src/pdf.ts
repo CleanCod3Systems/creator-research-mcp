@@ -4,7 +4,7 @@ import type {
   ContentProvider,
   ProviderCapabilities,
   TextPayload,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { existsSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { extractText, getDocumentProxy } from "unpdf";

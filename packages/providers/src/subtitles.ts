@@ -1,4 +1,4 @@
-import type { TextPayload } from "@creator-research/core";
+import type { TextPayload } from "@cleancod3/core";
 import { parseVtt, segmentsToText } from "./vtt.js";
 import type { YtDlpInfo } from "./ytdlp.js";
 

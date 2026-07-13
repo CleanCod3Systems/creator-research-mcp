@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { AnalysisDocument, FacetKind } from "@creator-research/core";
+import type { AnalysisDocument, FacetKind } from "@cleancod3/core";
 import { z } from "zod";
 import { getContext, getGenRepo } from "../context.js";
 

@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { detectOutlier, median } from "@creator-research/core";
+import { detectOutlier, median } from "@cleancod3/core";
 import { z } from "zod";
 import { getContext } from "../context.js";
 

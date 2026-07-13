@@ -32,13 +32,13 @@ importers:
 
   apps/mcp-server:
     dependencies:
-      '@creator-research/core':
+      '@cleancod3/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@creator-research/db':
+      '@cleancod3/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@creator-research/providers':
+      '@cleancod3/providers':
         specifier: workspace:*
         version: link:../../packages/providers
       '@modelcontextprotocol/sdk':
@@ -85,7 +85,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@creator-research/core':
+      '@cleancod3/core':
         specifier: workspace:*
         version: link:../core
       better-sqlite3:
@@ -110,7 +110,7 @@ importers:
 
   packages/providers:
     dependencies:
-      '@creator-research/core':
+      '@cleancod3/core':
         specifier: workspace:*
         version: link:../core
       '@mozilla/readability':

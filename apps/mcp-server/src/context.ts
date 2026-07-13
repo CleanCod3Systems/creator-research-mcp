@@ -4,8 +4,8 @@ import {
   expandHome,
   loadYamlConfigOrDefault,
   resolveConfigPathOrNull,
-} from "@creator-research/core";
-import type { ContentProvider } from "@creator-research/core";
+} from "@cleancod3/core";
+import type { ContentProvider } from "@cleancod3/core";
 import {
   AnalysisRepository,
   CommentsRepository,
@@ -16,7 +16,7 @@ import {
   SearchRepository,
   createDb,
   runMigrations,
-} from "@creator-research/db";
+} from "@cleancod3/db";
 import {
   InstagramProvider,
   LinkedInProvider,
@@ -26,7 +26,7 @@ import {
   TwitterProvider,
   WebProvider,
   YouTubeProvider,
-} from "@creator-research/providers";
+} from "@cleancod3/providers";
 import { dirname, isAbsolute, resolve } from "node:path";
 
 export interface AppContext {

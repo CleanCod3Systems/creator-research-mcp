@@ -1,4 +1,4 @@
-import type { AnalysisDocument } from "@creator-research/core";
+import type { AnalysisDocument } from "@cleancod3/core";
 import { and, desc, eq, gt, like, sql } from "drizzle-orm";
 import type { DbClient } from "./client.js";
 import {

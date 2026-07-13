@@ -1,4 +1,4 @@
-import type { TranscriptSegment } from "@creator-research/core";
+import type { TranscriptSegment } from "@cleancod3/core";
 
 const CUE_RE = /^(\d{2}):(\d{2}):(\d{2})\.(\d{3})\s+-->\s+(\d{2}):(\d{2}):(\d{2})\.(\d{3})/;
 

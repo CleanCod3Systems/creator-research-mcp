@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { computeGrowthMetrics, sourceHash } from "@creator-research/core";
+import { computeGrowthMetrics, sourceHash } from "@cleancod3/core";
 import { z } from "zod";
 import { getContext, getMetricsRepo } from "../context.js";
 

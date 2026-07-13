@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { canonicalizeUrl, sourceHash } from "@creator-research/core";
+import { canonicalizeUrl, sourceHash } from "@cleancod3/core";
 import { z } from "zod";
 import { getContext, getMetricsRepo, getProfileRepo } from "../context.js";
 

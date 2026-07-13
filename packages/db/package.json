@@ -1,5 +1,5 @@
 {
-  "name": "@creator-research/db",
+  "name": "@cleancod3/db",
   "version": "0.1.0",
   "private": false,
   "type": "module",
@@ -21,7 +21,7 @@
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "drizzle-orm": "^0.38.3",
-    "@creator-research/core": "workspace:*"
+    "@cleancod3/core": "workspace:*"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

@@ -5,7 +5,7 @@ import type {
   ProviderCapabilities,
   SourceComment,
   TextPayload,
-} from "@creator-research/core";
+} from "@cleancod3/core";
 import { textFromInfo } from "./subtitles.js";
 import { dumpComments, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 
