@@ -48,8 +48,10 @@ against this file *before* building it, not after.
 
 Grounded in the [official MCP spec](https://modelcontextprotocol.io/specification/draft/server/tools)
 and community best practices (e.g. [awslabs/mcp design guidelines](https://github.com/awslabs/mcp/blob/main/DESIGN_GUIDELINES.md)),
-adapted to this repo's TypeScript/Zod stack. Follow these for every new tool; see the
-`add-mcp-tool` skill (`.claude/skills/add-mcp-tool/SKILL.md`) for the step-by-step recipe.
+adapted to this repo's TypeScript/Zod stack. Follow these for every new tool; see
+[`.agents/skills/add-mcp-tool/SKILL.md`](.agents/skills/add-mcp-tool/SKILL.md) for the
+step-by-step recipe (Claude Code also finds it via `.claude/skills/add-mcp-tool/SKILL.md`, a
+pointer to the same file).
 
 - **Naming**: `snake_case`, verb_noun (`list_videos`, `get_transcript`). Letters, digits,
   underscore, hyphen, dot only. Keep it under 64 characters to stay compatible with clients that
