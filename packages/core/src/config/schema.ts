@@ -43,7 +43,8 @@ export const DEFAULT_PROVIDERS: ProvidersFile = {
     instagram: {
       enabled: true,
       reliability: "fragile",
-      notes: "Content behind login requires cookies (YTDLP_EXTRA_ARGS)",
+      notes:
+        "Public individual post/reel URLs only; authentication and cookie export are not supported",
     },
     twitter: {
       enabled: true,

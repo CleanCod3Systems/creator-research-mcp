@@ -53,7 +53,7 @@ The server **fetches data, it never analyzes** — there's no AI engine running 
 ```
 list_videos(channel)        →  stats + outlierScore + tags (yt-dlp or YouTube Data API)
 get_transcript(url)         →  metadata + subtitles/captions (yt-dlp/FxTwitter/scraping)
-get_comments(url)           →  public YouTube comments
+get_comments(url)           →  public YouTube/Instagram comments
        ↓
 The client LLM (ChatGPT/Claude) analyzes the text inside the conversation
        ↓
@@ -128,48 +128,50 @@ export YOUTUBE_API_KEY="your-key-here"
 
 ## Available tools
 
-| Tool                       | What it does                                                                                                                                    |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `capabilities`             | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                  |
-| `list_videos`              | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video |
-| `get_transcript`           | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`         |
-| `get_comments`             | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                        |
-| `get_content_ideas`        | Groups repeated audience requests into ranked content ideas — deterministic TF-IDF clustering, no embeddings/AI |
-| `get_video_heatmap`        | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                            |
-| `get_retention_moments`    | Joins the replay heatmap with the transcript by timestamp: what was actually said at the most/least rewatched moments — no manual cross-referencing |
-| `get_trending_videos`      | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                       |
-| `get_metrics_history`      | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements    |
-| `import_profile_snapshot`  | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above         |
-| `analyze_creator`          | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                            |
-| `compare_creators`         | Compares 2–10 channels side by side on the same stats — shared vs. unique tags                                                                  |
-| `save_analysis`            | Persists the analysis the client LLM produced from a `get_transcript` call                                                                      |
-| `get_analysis`             | A document by `analysisId` or `url` — `format: markdown\|json\|text`                                                                            |
-| `search_knowledge`         | Searches across every accumulated facet: "which videos teach Astro?"                                                                            |
-| `compare`                  | A deterministic matrix between 2–10 analyses: shared / partial / unique per source                                                              |
-| `generate_course`          | A course skeleton from N analyses: topic dedup, ordered by level                                                                                |
-| `generate_roadmap`         | A leveled roadmap from the corpus, with a Mermaid diagram                                                                                       |
-| `history`                  | Recent analyses with their status                                                                                                               |
+| Tool                      | What it does                                                                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capabilities`            | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                                          |
+| `list_videos`             | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video               |
+| `get_transcript`          | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch), with `refresh` for stale cache — video/tweet/post/article/PDF, paginated with `offset` |
+| `get_comments`            | Public YouTube/Instagram comments with cache age and optional `refresh` — for spotting FAQs, criticism, and requested content                                           |
+| `get_content_ideas`       | Groups repeated audience requests into ranked content ideas — deterministic TF-IDF clustering, no embeddings/AI                                                         |
+| `get_video_heatmap`       | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                                                    |
+| `get_retention_moments`   | Joins the replay heatmap with the transcript by timestamp: what was actually said at the most/least rewatched moments — no manual cross-referencing                     |
+| `get_trending_videos`     | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                                               |
+| `get_metrics_history`     | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements                            |
+| `import_profile_snapshot` | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above                                 |
+| `analyze_creator`         | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                                                    |
+| `compare_creators`        | Compares 2–10 channels side by side on the same stats — shared vs. unique tags                                                                                          |
+| `save_analysis`           | Persists the analysis the client LLM produced from a `get_transcript` call                                                                                              |
+| `get_analysis`            | A document by `analysisId` or `url` — `format: markdown\|json\|text`                                                                                                    |
+| `search_knowledge`        | Searches across every accumulated facet: "which videos teach Astro?"                                                                                                    |
+| `compare`                 | A deterministic matrix between 2–10 analyses: shared / partial / unique per source                                                                                      |
+| `generate_course`         | A course skeleton from N analyses: topic dedup, ordered by level                                                                                                        |
+| `generate_roadmap`        | A leveled roadmap from the corpus, with a Mermaid diagram                                                                                                               |
+| `history`                 | Recent analyses with their status                                                                                                                                       |
 
 Typical flow: _"get me the most-viewed videos from @channel, the transcript of the top 3, and
 turn that into a reel script"_ → `list_videos` → `get_transcript` × 3 → the LLM analyzes and
 writes the script → optionally `save_analysis` to query it later.
 
-Useful env vars: `YTDLP_EXTRA_ARGS` (e.g. `--cookies-from-browser chrome` for rate-limited
-Instagram), `YOUTUBE_API_KEY`, `MCP_AUTH_TOKEN`, `DATABASE_PATH`.
+Useful env vars: `YTDLP_EXTRA_ARGS` (for special local environments), `YOUTUBE_API_KEY`,
+`MCP_AUTH_TOKEN`, `DATABASE_PATH`.
 
 ## Providers and honest limitations
 
 | Source                                  | Status                                                                                     |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------- |
-| YouTube, web articles, PDF, local files  | ✅ stable                                                                                    |
-| TikTok, Instagram, Twitter/X             | ⚠️ fragile — best-effort, can break if the platform changes                                  |
-| LinkedIn                                 | ⚠️ fragile — public posts/articles only; behind the login wall, extraction is not possible   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| YouTube, web articles, PDF, local files | ✅ stable                                                                                  |
+| TikTok, Instagram, Twitter/X            | ⚠️ fragile — best-effort, can break if the platform changes                                |
+| LinkedIn                                | ⚠️ fragile — public posts/articles only; behind the login wall, extraction is not possible |
 
-- **Instagram**: there's no way to list an entire profile — this is a limitation of `yt-dlp`
-  itself (`instagram:user (CURRENTLY BROKEN)`, with or without cookies), not of this server.
-  Pass individual post/reel URLs to `get_transcript` (it accepts `urls` in batch), or manually
-  record followers/likes/comments with `import_profile_snapshot` if you want to track growth over
-  time. Browser cookies are never extracted and login is never bypassed.
+- **Instagram**: public individual post/reel URLs are supported on a best-effort basis. Metadata
+  includes author details, available engagement, thumbnails, captions, and carousel items. Public
+  comments are best-effort and may be unavailable. Stories/highlights may expire, and image-only
+  posts may have no text beyond their caption. There is no automatic profile listing. Pass
+  individual URLs to `get_transcript` (it accepts `urls` in batch), or manually record
+  followers/likes/comments with `import_profile_snapshot` to track profile growth over time.
+  Credentials and browser cookies are not requested, and login is never bypassed.
 - **Twitter/X**: only individual public tweets (via FxTwitter); profiles and replies are out of
   scope.
 - **TikTok**: `yt-dlp` best-effort; no comments support.

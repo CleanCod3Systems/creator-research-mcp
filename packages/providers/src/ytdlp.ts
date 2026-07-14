@@ -16,12 +16,30 @@ export interface YtDlpInfo {
   channel?: string;
   channel_id?: string;
   uploader?: string;
+  uploader_id?: string;
+  uploader_url?: string;
+  thumbnail?: string;
+  media_type?: string;
+  availability?: string;
   view_count?: number | null;
   like_count?: number | null;
   comment_count?: number | null;
   language?: string | null;
   subtitles?: Record<string, { url: string; ext: string }[]>;
   automatic_captions?: Record<string, { url: string; ext: string }[]>;
+  webpage_url?: string;
+  entries?: YtDlpEntry[];
+}
+
+export interface YtDlpEntry {
+  id: string;
+  title?: string;
+  duration?: number | null;
+  thumbnail?: string;
+  media_type?: string;
+  view_count?: number | null;
+  like_count?: number | null;
+  comment_count?: number | null;
   webpage_url?: string;
 }
 
@@ -86,7 +104,15 @@ interface YtRawComment {
 }
 
 /** Comments via yt-dlp (no API key). comment_sort=top prioritizes relevant ones. */
-export async function dumpComments(url: string, max: number): Promise<YtRawComment[]> {
+export async function dumpComments(
+  url: string,
+  max: number,
+  extractor: "youtube" | "instagram" = "youtube",
+): Promise<YtRawComment[]> {
+  const extractorArgs =
+    extractor === "youtube"
+      ? ["--extractor-args", `youtube:comment_sort=top;max_comments=${String(max)}`]
+      : [];
   const { stdout } = await exec(
     YTDLP_BIN,
     [
@@ -96,8 +122,7 @@ export async function dumpComments(url: string, max: number): Promise<YtRawComme
       "--no-warnings",
       "--no-playlist",
       "--write-comments",
-      "--extractor-args",
-      `youtube:comment_sort=top;max_comments=${String(max)}`,
+      ...extractorArgs,
       url,
     ],
     { timeout: 240_000, maxBuffer: 128 * 1024 * 1024 },

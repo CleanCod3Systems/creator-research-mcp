@@ -33,6 +33,10 @@ export class ContentRepository {
     return inserted.id;
   }
 
+  updateContentItem(contentItemId: number, data: Partial<typeof contentItems.$inferInsert>): void {
+    this.db.update(contentItems).set(data).where(eq(contentItems.id, contentItemId)).run();
+  }
+
   insertTranscript(data: typeof transcripts.$inferInsert): void {
     this.db.insert(transcripts).values(data).run();
   }
@@ -266,6 +270,16 @@ export class CommentsRepository {
       .where(eq(comments.contentItemId, contentItemId))
       .orderBy(desc(comments.likes))
       .all();
+  }
+
+  getLastFetchedAt(contentItemId: number): string | null {
+    const row = this.db
+      .select({ createdAt: comments.createdAt })
+      .from(comments)
+      .where(eq(comments.contentItemId, contentItemId))
+      .orderBy(desc(comments.createdAt))
+      .get();
+    return row?.createdAt ?? null;
   }
 }
 

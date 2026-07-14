@@ -25,7 +25,29 @@ export interface ContentMetadata {
   viewCount?: number;
   likeCount?: number;
   commentCount?: number;
+  authorHandle?: string;
+  authorId?: string;
+  authorUrl?: string;
+  thumbnailUrl?: string;
+  mediaType?: string;
+  availability?: string;
+  mediaItems?: RelatedMediaItem[];
+  isCarousel?: boolean;
+  itemCount?: number;
+  limitations?: string[];
   raw: Record<string, unknown>;
+}
+
+export interface RelatedMediaItem {
+  externalId: string;
+  url?: string;
+  title?: string;
+  durationSec?: number;
+  thumbnailUrl?: string;
+  mediaType?: string;
+  viewCount?: number;
+  likeCount?: number;
+  commentCount?: number;
 }
 
 export interface TranscriptSegment {

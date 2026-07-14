@@ -3,7 +3,7 @@ import type {
   ContentMetadata,
   ContentProvider,
   ProviderCapabilities,
-  SourceComment,
+  RelatedMediaItem,
   TextPayload,
 } from "@cleancod3/core";
 import { textFromInfo } from "./subtitles.js";
@@ -11,7 +11,7 @@ import { dumpComments, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
 
 const HOSTS = ["instagram.com", "www.instagram.com", "m.instagram.com"];
 
-/** Instagram reels and posts via yt-dlp. Content requiring login needs browser cookies. */
+/** Public Instagram posts and reels via yt-dlp. Authentication is never requested or bypassed. */
 export class InstagramProvider implements ContentProvider {
   readonly name = "instagram";
   private readonly infoCache = new Map<string, YtDlpInfo>();
@@ -25,13 +25,7 @@ export class InstagramProvider implements ContentProvider {
   }
 
   classify(url: string): ContentKind {
-    const u = new URL(url);
-    if (/^\/(reel|reels|stories)\//.test(u.pathname)) return "short";
-    if (/^\/(p|tv)\//.test(u.pathname)) return "video";
-    // /username/reel/... etc.
-    if (/^\/[^/]+\/(reel|reels)\//.test(u.pathname)) return "short";
-    if (/^\/[^/]+\/(p|tv)\//.test(u.pathname)) return "video";
-    return "channel";
+    return classifyInstagramPath(new URL(url).pathname);
   }
 
   capabilities(): ProviderCapabilities {
@@ -44,7 +38,7 @@ export class InstagramProvider implements ContentProvider {
         channelListing: false,
       },
       legalNotes:
-        'Private or rate-limited content requires cookies: YTDLP_EXTRA_ARGS="--cookies-from-browser chrome"',
+        "Public content only; comments are best-effort and authentication is never requested or bypassed.",
     };
   }
 
@@ -58,11 +52,7 @@ export class InstagramProvider implements ContentProvider {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (/login|cookies|rate.?limit|401|403|not available/i.test(msg)) {
-        throw new Error(
-          "Instagram requires authentication for this content. " +
-            'Export browser cookies with YTDLP_EXTRA_ARGS="--cookies-from-browser chrome" ' +
-            `(or firefox/safari) and retry. Detail: ${msg.slice(0, 300)}`,
-        );
+        throw new Error(instagramAccessErrorMessage(msg));
       }
       throw err;
     }
@@ -83,6 +73,16 @@ export class InstagramProvider implements ContentProvider {
       viewCount: info.view_count ?? undefined,
       likeCount: info.like_count ?? undefined,
       commentCount: info.comment_count ?? undefined,
+      authorHandle: info.channel,
+      authorId: info.uploader_id,
+      authorUrl: info.uploader_url ?? instagramProfileUrl(info.channel),
+      thumbnailUrl: info.thumbnail,
+      mediaType: info.media_type,
+      availability: info.availability,
+      mediaItems: relatedMediaItems(info.entries),
+      isCarousel: info.entries ? info.entries.length > 1 : undefined,
+      itemCount: info.entries?.length,
+      limitations: instagramMetadataLimitations(url, info),
       raw: info as unknown as Record<string, unknown>,
     };
   }
@@ -93,19 +93,14 @@ export class InstagramProvider implements ContentProvider {
    * the caption IS the copy/content — CTAs, context, what "sells" — not a marginal note.
    */
   async fetchText(url: string): Promise<TextPayload | null> {
-    const subs = await textFromInfo(await this.info(url));
-    if (subs) return subs;
     const info = await this.info(url);
-    if (!info.description?.trim()) return null;
-    return {
-      text: info.description.trim(),
-      source: "native_text",
-      language: info.language ?? undefined,
-    };
+    const subs = await textFromInfo(info);
+    if (subs) return subs;
+    return captionToText(info);
   }
 
-  async fetchComments(url: string, limit: number): Promise<SourceComment[]> {
-    const raw = await dumpComments(url, limit);
+  async fetchComments(url: string, limit: number) {
+    const raw = await dumpComments(url, limit, "instagram");
     return raw
       .filter((c) => c.text)
       .slice(0, limit)
@@ -117,4 +112,68 @@ export class InstagramProvider implements ContentProvider {
         postedAt: c.timestamp ? new Date(c.timestamp * 1000).toISOString() : undefined,
       }));
   }
+}
+
+function instagramProfileUrl(handle?: string): string | undefined {
+  return handle ? `https://www.instagram.com/${handle}/` : undefined;
+}
+
+export function relatedMediaItems(entries?: YtDlpInfo["entries"]): RelatedMediaItem[] | undefined {
+  if (!entries?.length) return undefined;
+  return entries.map((entry) => ({
+    externalId: entry.id,
+    url: entry.webpage_url,
+    title: entry.title,
+    durationSec: entry.duration ?? undefined,
+    thumbnailUrl: entry.thumbnail,
+    mediaType: entry.media_type,
+    viewCount: entry.view_count ?? undefined,
+    likeCount: entry.like_count ?? undefined,
+    commentCount: entry.comment_count ?? undefined,
+  }));
+}
+
+function instagramMetadataLimitations(url: string, info: YtDlpInfo): string[] {
+  const limitations: string[] = [];
+  const pathname = new URL(url).pathname;
+  if (pathname.startsWith("/stories/")) {
+    limitations.push(
+      "Instagram stories and highlights may expire or become inaccessible after extraction",
+    );
+  }
+  if (info.view_count == null) limitations.push("The provider did not expose a view count");
+  if (info.like_count == null) limitations.push("The provider did not expose a like count");
+  if (info.comment_count == null) {
+    limitations.push("The provider did not expose a comment count");
+  }
+  return limitations;
+}
+
+export function classifyInstagramPath(pathname: string): ContentKind {
+  if (/^\/(reel|reels|stories)\//.test(pathname)) return "short";
+  if (/^\/(p|tv)\//.test(pathname)) return "video";
+  // /username/reel/... and /username/p/... are also valid Instagram URL shapes.
+  if (/^\/[^/]+\/(reel|reels)\//.test(pathname)) return "short";
+  if (/^\/[^/]+\/(p|tv)\//.test(pathname)) return "video";
+  return "channel";
+}
+
+export function captionToText(
+  info: Pick<YtDlpInfo, "description" | "language">,
+): TextPayload | null {
+  const caption = info.description?.trim();
+  if (!caption) return null;
+  return {
+    text: caption,
+    source: "native_text",
+    language: info.language ?? undefined,
+  };
+}
+
+export function instagramAccessErrorMessage(detail: string): string {
+  return (
+    "Instagram content is not publicly accessible or is currently rate-limited. " +
+    "The server only supports public content and does not request credentials, export cookies, " +
+    `or bypass login. Detail: ${detail.slice(0, 300)}`
+  );
 }

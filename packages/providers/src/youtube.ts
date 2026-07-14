@@ -134,6 +134,12 @@ export class YouTubeProvider implements ContentProvider {
       viewCount: info.view_count ?? undefined,
       likeCount: info.like_count ?? undefined,
       commentCount: info.comment_count ?? undefined,
+      authorHandle: info.channel,
+      authorId: info.channel_id,
+      authorUrl: info.uploader_url,
+      thumbnailUrl: info.thumbnail,
+      mediaType: info.media_type,
+      availability: info.availability,
       raw: info as unknown as Record<string, unknown>,
     };
   }

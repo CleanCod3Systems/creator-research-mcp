@@ -1,10 +1,67 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { canonicalizeUrl, sourceHash, type SourceRef } from "@cleancod3/core";
+import {
+  canonicalizeUrl,
+  sourceHash,
+  type ContentMetadata,
+  type RelatedMediaItem,
+  type SourceRef,
+} from "@cleancod3/core";
 import { z } from "zod";
+import { cacheAgeSeconds } from "../cache.js";
 import { getContext, getMetricsRepo } from "../context.js";
 
 const MAX_CHARS_DEFAULT = 80_000;
 const MAX_BATCH = 15;
+const NORMALIZED_METADATA_KEY = "_creatorResearchMetadata";
+
+export interface MetadataDetails {
+  authorHandle: string | null;
+  authorId: string | null;
+  authorUrl: string | null;
+  thumbnailUrl: string | null;
+  mediaType: string | null;
+  availability: string | null;
+  mediaItems: RelatedMediaItem[] | null;
+  isCarousel: boolean | null;
+  itemCount: number | null;
+  fetchedAt: string | null;
+}
+
+export function buildMetadataDetails(
+  meta: Partial<ContentMetadata>,
+  fetchedAt: string | null = null,
+): MetadataDetails {
+  return {
+    authorHandle: meta.authorHandle ?? null,
+    authorId: meta.authorId ?? null,
+    authorUrl: meta.authorUrl ?? null,
+    thumbnailUrl: meta.thumbnailUrl ?? null,
+    mediaType: meta.mediaType ?? null,
+    availability: meta.availability ?? null,
+    mediaItems: meta.mediaItems ?? null,
+    isCarousel: meta.isCarousel ?? null,
+    itemCount: meta.itemCount ?? null,
+    fetchedAt,
+  };
+}
+
+export function buildMetadataLimitations(meta: Partial<ContentMetadata>): string[] {
+  const limitations = [...(meta.limitations ?? [])];
+  if (meta.viewCount === undefined) limitations.push("The provider did not expose a view count");
+  if (meta.likeCount === undefined) limitations.push("The provider did not expose a like count");
+  if (meta.commentCount === undefined) {
+    limitations.push("The provider did not expose a comment count");
+  }
+  return [...new Set(limitations)];
+}
+
+function cachedMetadataDetails(rawMetadata: unknown): MetadataDetails | null {
+  if (!rawMetadata || typeof rawMetadata !== "object") return null;
+  const raw = rawMetadata as Record<string, unknown>;
+  const normalized = raw[NORMALIZED_METADATA_KEY];
+  if (!normalized || typeof normalized !== "object") return null;
+  return normalized as MetadataDetails;
+}
 
 /**
  * Client-reasoning mode: no AI engine of its own.
@@ -18,12 +75,12 @@ export function registerGetTranscriptTool(server: McpServer): void {
     {
       title: "Get transcript",
       description:
-        "Extracts metadata, engagement (views/likes/comments), and text from a source (video with subtitles, " +
+        "Extracts metadata, engagement (views/likes/comments), author details, thumbnails, carousel items, and text from a source (video with subtitles, " +
         "tweet, Instagram/LinkedIn post, web article, PDF, md/txt file) WITHOUT its own AI engine: you " +
         "(the client LLM) analyze the text in the conversation. " +
         `Pass 'urls' (up to ${String(MAX_BATCH)}) instead of 'url' to fetch several sources in a single ` +
         "call — useful for Instagram/Twitter, where there's no automatic profile listing and you have to paste " +
-        "individual posts. After analyzing, save the result with save_analysis. Long transcripts: use offset. " +
+        "individual posts. Set refresh=true when the cached result is stale. After analyzing, save the result with save_analysis. Long transcripts: use offset. " +
         "If you draft a script from this transcript, ground the voice in real reference material instead of " +
         "generic AI style: pull a few more transcripts from the same creator (get_transcript on other videos, " +
         "or search_knowledge) to see how they actually phrase things, and use any memory you have of their " +
@@ -41,9 +98,13 @@ export function registerGetTranscriptTool(server: McpServer): void {
         filePath: z.string().optional().describe("File path on the server's disk"),
         offset: z.number().int().min(0).default(0),
         maxChars: z.number().int().min(1000).max(200_000).default(MAX_CHARS_DEFAULT),
+        refresh: z
+          .boolean()
+          .default(false)
+          .describe("Refetch the source instead of reusing the cached result"),
       },
     },
-    async ({ url, urls, filePath, offset, maxChars }) => {
+    async ({ url, urls, filePath, offset, maxChars, refresh }) => {
       const provided = [url, urls, filePath].filter((v) => v !== undefined).length;
       if (provided !== 1) {
         return json({
@@ -52,10 +113,12 @@ export function registerGetTranscriptTool(server: McpServer): void {
         });
       }
       if (urls) {
-        const results = await Promise.all(urls.map((u) => fetchOne({ url: u }, offset, maxChars)));
+        const results = await Promise.all(
+          urls.map((u) => fetchOne({ url: u }, offset, maxChars, refresh)),
+        );
         return json({ batch: true, count: results.length, results });
       }
-      const single = await fetchOne({ url, filePath }, offset, maxChars);
+      const single = await fetchOne({ url, filePath }, offset, maxChars, refresh);
       return json(single);
     },
   );
@@ -65,6 +128,7 @@ async function fetchOne(
   ref: { url?: string; filePath?: string },
   offset: number,
   maxChars: number,
+  refresh: boolean,
 ): Promise<Record<string, unknown>> {
   const { content, providers } = getContext();
   const source: SourceRef = ref.url
@@ -103,9 +167,25 @@ async function fetchOne(
   // reuse: if we already extracted this transcript, don't call yt-dlp again
   const existingId = content.findIdByHash(hash);
   const cached = existingId !== null ? content.getTranscript(existingId) : null;
-  if (cached) {
+  if (cached && !refresh) {
+    const cachedItem = existingId === null ? null : content.getItem(existingId);
+    const cachedMetadata = cachedMetadataDetails(cachedItem?.rawMetadata);
     return page(
-      { url: ref.url, title: null, transcript: cached, cachedFromDb: true },
+      {
+        url: ref.url,
+        title: cachedItem?.title ?? null,
+        transcript: cached,
+        cachedFromDb: true,
+        metadata: cachedMetadata,
+        cache: {
+          hit: true,
+          fetchedAt: cachedMetadata?.fetchedAt ?? null,
+          ageSeconds: cacheAgeSeconds(cachedMetadata?.fetchedAt),
+        },
+        limitations: cachedMetadata
+          ? []
+          : ["This cached transcript predates normalized metadata; refetch to refresh its details"],
+      },
       offset,
       maxChars,
     );
@@ -132,6 +212,7 @@ async function fetchOne(
         "The source has no direct text (no subtitles, no extractable article). Try another video/URL.",
     };
   }
+  const cacheFetchedAt = new Date().toISOString();
   const contentItemId = content.upsertContentItem({
     sourceType:
       kind === "short"
@@ -153,7 +234,21 @@ async function fetchOne(
     durationSec: meta.durationSec,
     publishedAt: meta.publishedAt,
     language: meta.language,
-    rawMetadata: meta.raw,
+    rawMetadata: {
+      ...meta.raw,
+      [NORMALIZED_METADATA_KEY]: buildMetadataDetails(meta, cacheFetchedAt),
+    },
+  });
+  content.updateContentItem(contentItemId, {
+    title: meta.title,
+    description: meta.description,
+    durationSec: meta.durationSec,
+    publishedAt: meta.publishedAt,
+    language: meta.language,
+    rawMetadata: {
+      ...meta.raw,
+      [NORMALIZED_METADATA_KEY]: buildMetadataDetails(meta, cacheFetchedAt),
+    },
   });
   content.insertTranscript({
     contentItemId,
@@ -188,6 +283,9 @@ async function fetchOne(
       views: meta.viewCount ?? null,
       likes: meta.likeCount ?? null,
       comments: meta.commentCount ?? null,
+      metadata: buildMetadataDetails(meta, cacheFetchedAt),
+      cache: { hit: false, refreshed: refresh, fetchedAt: cacheFetchedAt, ageSeconds: 0 },
+      limitations: buildMetadataLimitations(meta),
       transcript: { text: text.text, source: text.source, language: text.language },
       nextStep:
         "Analyze this transcript (summary, technologies, practices, syllabus...) and persist the result with save_analysis(url, facets).",

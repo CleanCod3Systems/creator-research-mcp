@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { canonicalizeUrl, clusterBySharedTerms, sourceHash, tokenize } from "@cleancod3/core";
 import { z } from "zod";
+import { cacheAgeSeconds } from "../cache.js";
 import { getCommentsRepo, getContext } from "../context.js";
 
 interface CommentLike {
@@ -56,23 +57,28 @@ export function registerContentIdeasTool(server: McpServer): void {
     {
       title: "Cluster repeated audience requests into content ideas",
       description:
-        "Fetches public comments (YouTube/Instagram, same source as get_comments) and groups the ones asking " +
+        "Fetches public YouTube or Instagram comments (same source as get_comments) and groups the ones asking " +
         "for/about the same thing using deterministic TF-IDF clustering — no embeddings, no AI. Only requests " +
-        "repeated by ≥2 different comments count as an idea (a single comment isn't a pattern). Ranked by how " +
+        "repeated by ≥2 different comments count as an idea (a single comment isn't a pattern). Set refresh=true " +
+        "to fetch fresh comments. Ranked by how " +
         "many people asked plus total likes, so the top result is the strongest signal for what to make next.",
       inputSchema: {
         url: z.string().url(),
         limit: z.number().int().min(10).max(300).default(150),
         maxIdeas: z.number().int().min(1).max(30).default(10),
+        refresh: z
+          .boolean()
+          .default(false)
+          .describe("Refetch comments instead of reusing the cached result"),
       },
     },
-    async ({ url, limit, maxIdeas }) => {
+    async ({ url, limit, maxIdeas, refresh }) => {
       const { content, providers } = getContext();
       const provider = providers.find((p) => p.matches(url));
       if (!provider?.fetchComments || !provider.capabilities().supports.comments) {
         return json({
           error: "unsupported",
-          message: "Comments: YouTube/Instagram only for now",
+          message: "Comments are currently supported for public YouTube and Instagram content",
         });
       }
       const hash = sourceHash({ type: "url", url });
@@ -80,24 +86,43 @@ export function registerContentIdeasTool(server: McpServer): void {
       const repo = getCommentsRepo();
 
       let comments: CommentLike[] = [];
-      if (contentItemId !== null) {
+      let cachedFromDb = false;
+      let fetchedAt: string | null = null;
+      if (contentItemId !== null && !refresh) {
         comments = repo.getForItem(contentItemId);
+        if (comments.length > 0) {
+          cachedFromDb = true;
+          fetchedAt = repo.getLastFetchedAt(contentItemId);
+        }
       }
       if (comments.length === 0) {
-        const meta = await provider.fetchMetadata(url);
-        contentItemId ??= content.upsertContentItem({
-          sourceType: "video",
-          provider: provider.name,
-          url,
-          canonicalUrl: canonicalizeUrl(url),
-          contentHash: hash,
-          title: meta.title,
-          durationSec: meta.durationSec,
-          rawMetadata: meta.raw,
-        });
-        const fetched = await provider.fetchComments(url, limit);
-        repo.replaceForItem(contentItemId, fetched);
-        comments = fetched.map((c) => ({ author: c.author, text: c.text, likes: c.likes ?? null }));
+        try {
+          const meta = await provider.fetchMetadata(url);
+          contentItemId ??= content.upsertContentItem({
+            sourceType: "video",
+            provider: provider.name,
+            url,
+            canonicalUrl: canonicalizeUrl(url),
+            contentHash: hash,
+            title: meta.title,
+            durationSec: meta.durationSec,
+            rawMetadata: meta.raw,
+          });
+          const fetched = await provider.fetchComments(url, limit);
+          repo.replaceForItem(contentItemId, fetched);
+          comments = fetched.map((c) => ({
+            author: c.author,
+            text: c.text,
+            likes: c.likes ?? null,
+          }));
+          fetchedAt = new Date().toISOString();
+        } catch (err) {
+          return json({
+            url,
+            error: "fetch_failed",
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
 
       if (comments.length < 5) {
@@ -105,6 +130,10 @@ export function registerContentIdeasTool(server: McpServer): void {
           url,
           totalComments: comments.length,
           ideas: [],
+          cachedFromDb,
+          refreshed: refresh,
+          fetchedAt,
+          ageSeconds: cacheAgeSeconds(fetchedAt),
           limitations: [
             "Too few comments to find a repeated pattern (need at least 5). Try get_comments to read them individually.",
           ],
@@ -116,6 +145,10 @@ export function registerContentIdeasTool(server: McpServer): void {
         url,
         totalComments: comments.length,
         ideas,
+        cachedFromDb,
+        refreshed: refresh,
+        fetchedAt,
+        ageSeconds: cacheAgeSeconds(fetchedAt),
         limitations:
           ideas.length === 0
             ? ["No comments shared enough vocabulary to form a repeated-request cluster."]

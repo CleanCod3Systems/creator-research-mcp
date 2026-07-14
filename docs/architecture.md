@@ -35,12 +35,12 @@ Consequences of this design:
 
 pnpm workspaces + Turborepo, four packages:
 
-| Package                 | Responsibility                                                      |
-| ------------------------ | --------------------------------------------------------------------- |
-| `packages/core`          | Pure domain logic (Zod schemas, stats, ports/interfaces). Zero I/O. |
-| `packages/db`            | Drizzle ORM + SQLite (WAL mode), migrations, repositories.           |
-| `packages/providers`     | One adapter per platform (YouTube, TikTok, Instagram, Twitter/X, LinkedIn, web, PDF, local files). |
-| `apps/mcp-server`        | MCP tool registration, dual transport (stdio + Streamable HTTP), the executable binary. |
+| Package              | Responsibility                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| `packages/core`      | Pure domain logic (Zod schemas, stats, ports/interfaces). Zero I/O.                                |
+| `packages/db`        | Drizzle ORM + SQLite (WAL mode), migrations, repositories.                                         |
+| `packages/providers` | One adapter per platform (YouTube, TikTok, Instagram, Twitter/X, LinkedIn, web, PDF, local files). |
+| `apps/mcp-server`    | MCP tool registration, dual transport (stdio + Streamable HTTP), the executable binary.            |
 
 Dependency direction is one-way: `mcp-server → providers → core`, and `db → core`. Nothing in
 `core` imports from `db` or `providers`.
@@ -78,16 +78,16 @@ Dependency direction is one-way: `mcp-server → providers → core`, and `db �
 
 ## Providers (`packages/providers`)
 
-| Provider    | Reliability   | Notes                                                                                    |
-| ----------- | ------------- | ----------------------------------------------------------------------------------------- |
-| `youtube`   | stable        | `yt-dlp` for metadata/subtitles; optional YouTube Data API v3 (`YOUTUBE_API_KEY`) for exact likes/tags and trending. |
-| `web`       | stable        | Readability (`@mozilla/readability` + `jsdom`) for articles/blogs.                        |
-| `pdf`       | stable        | Text extraction via `unpdf`.                                                              |
-| `localfile` | stable        | Reads `.md`/`.txt` (and media, for metadata) straight from local disk — universal fallback for anything with no automated provider. |
-| `tiktok`    | fragile       | `yt-dlp` best-effort; no comments support.                                                |
-| `instagram` | fragile       | No profile listing exists (a `yt-dlp` limitation, not this server's) — only single post/reel URLs via `get_transcript`, plus manual growth tracking via `import_profile_snapshot`. Never touches browser cookies or bypasses login. |
-| `twitter`   | fragile       | Single public tweets via FxTwitter only — no profile/thread scraping.                     |
-| `linkedin`  | fragile       | Public posts/articles only; anything behind the login wall is out of scope.               |
+| Provider    | Reliability | Notes                                                                                                                                                                                                                                                                                                           |
+| ----------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `youtube`   | stable      | `yt-dlp` for metadata/subtitles; optional YouTube Data API v3 (`YOUTUBE_API_KEY`) for exact likes/tags and trending.                                                                                                                                                                                            |
+| `web`       | stable      | Readability (`@mozilla/readability` + `jsdom`) for articles/blogs.                                                                                                                                                                                                                                              |
+| `pdf`       | stable      | Text extraction via `unpdf`.                                                                                                                                                                                                                                                                                    |
+| `localfile` | stable      | Reads `.md`/`.txt` (and media, for metadata) straight from local disk — universal fallback for anything with no automated provider.                                                                                                                                                                             |
+| `tiktok`    | fragile     | `yt-dlp` best-effort; no comments support.                                                                                                                                                                                                                                                                      |
+| `instagram` | fragile     | Public single post/reel URLs only; metadata can include captions, engagement, author details, thumbnails, and carousel items. Comments are best-effort; stories/highlights may expire; no profile listing. Manual growth tracking uses `import_profile_snapshot`. Never requests credentials or bypasses login. |
+| `twitter`   | fragile     | Single public tweets via FxTwitter only — no profile/thread scraping.                                                                                                                                                                                                                                           |
+| `linkedin`  | fragile     | Public posts/articles only; anything behind the login wall is out of scope.                                                                                                                                                                                                                                     |
 
 Cross-cutting: `retry.ts` wraps HTTP-based providers with exponential backoff, retrying
 transient errors (429, 5xx, timeouts) and never retrying auth/permission errors (401/403/404).

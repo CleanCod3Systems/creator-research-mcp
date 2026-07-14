@@ -11,7 +11,7 @@ providers:
     {
       enabled: true,
       reliability: fragile,
-      notes: 'Content behind login requires cookies (YTDLP_EXTRA_ARGS="--cookies-from-browser chrome")',
+      notes: "Public individual post/reel URLs only; authentication and cookie export are not supported",
     }
   twitter:
     {
