@@ -23,7 +23,13 @@ export function registerGetTranscriptTool(server: McpServer): void {
         "(the client LLM) analyze the text in the conversation. " +
         `Pass 'urls' (up to ${String(MAX_BATCH)}) instead of 'url' to fetch several sources in a single ` +
         "call — useful for Instagram/Twitter, where there's no automatic profile listing and you have to paste " +
-        "individual posts. After analyzing, save the result with save_analysis. Long transcripts: use offset.",
+        "individual posts. After analyzing, save the result with save_analysis. Long transcripts: use offset. " +
+        "If you draft a script from this transcript, ground the voice in real reference material instead of " +
+        "generic AI style: pull a few more transcripts from the same creator (get_transcript on other videos, " +
+        "or search_knowledge) to see how they actually phrase things, and use any memory you have of their " +
+        "established voice from earlier in this conversation. Then vary sentence length, use active voice, " +
+        "drop AI-cliché words (delve, tapestry, moreover, furthermore, in conclusion), and keep one concrete " +
+        "example/anecdote rather than a list of abstractions.",
       inputSchema: {
         url: z.string().url().optional(),
         urls: z

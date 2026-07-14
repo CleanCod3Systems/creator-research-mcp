@@ -5,6 +5,7 @@ import { registerGetTranscriptTool } from "./tools/transcript.js";
 import { registerSaveAnalysisTool } from "./tools/save-analysis.js";
 import { registerSearchTools } from "./tools/search.js";
 import { registerCommentsTool } from "./tools/comments.js";
+import { registerContentIdeasTool } from "./tools/content-ideas.js";
 import { registerCompareTool } from "./tools/compare.js";
 import { registerGenerateTools } from "./tools/generate.js";
 import { registerListVideosTool } from "./tools/videos.js";
@@ -16,7 +17,7 @@ import { registerImportProfileSnapshotTool } from "./tools/import-profile.js";
 import { registerAnalyzeCreatorTool, registerCompareCreatorsTool } from "./tools/creator-analysis.js";
 
 export const SERVER_NAME = "creator-research";
-export const SERVER_VERSION = "0.6.0";
+export const SERVER_VERSION = "0.7.0";
 
 /**
  * Client-reasoning-only mode: the server fetches data (transcript, comments, stats),
@@ -31,6 +32,7 @@ export function buildServer(): McpServer {
   registerSaveAnalysisTool(server);
   registerSearchTools(server);
   registerCommentsTool(server);
+  registerContentIdeasTool(server);
   registerCompareTool(server);
   registerGenerateTools(server);
   registerListVideosTool(server);

@@ -66,6 +66,10 @@ Dependency direction is one-way: `mcp-server → providers → core`, and `db �
     between two metric snapshots. Guiding rule: **never divide by an absent or zero
     denominator** — any metric that can't be computed with certainty comes back as `null`, with
     the reason listed in a `limitations: string[]` array. Nothing is ever guessed.
+- **`domain/clustering.ts`** — `clusterBySharedTerms(texts)`: groups comments by TF-IDF-weighted
+  cosine similarity over shared vocabulary — deterministic, no embeddings, no model. Powers
+  `get_content_ideas`. Honest about its own limits: it catches literal/near-literal repeats, not
+  purely semantic paraphrases with no word overlap.
 - **`ports/provider.ts`** — the `ContentProvider` interface every adapter implements:
   `matches(url)`, `classify(url)`, `capabilities()`, `fetchMetadata`, `fetchText`, and the
   optional `listItems`/`fetchComments`. `ProviderCapabilities.reliability` is one of

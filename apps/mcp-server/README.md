@@ -32,6 +32,10 @@ Point your LLM client at a channel, a video, or a competitor's profile and ask t
 - _"Compare these 5 creators: who posts more often, who covers what topics, what's missing?"_ —
   `analyze_creator`/`compare_creators` give deterministic stats (cadence, keywords, format
   performance) across multiple channels at once.
+- _"What do people keep asking for in the comments that I haven't made yet?"_ —
+  `get_content_ideas` clusters repeated requests/questions by shared vocabulary and ranks them by
+  how many people asked plus engagement — a single comment isn't a pattern, so singletons are
+  dropped.
 - _"Turn what these videos teach into a course outline / learning roadmap."_ —
   `generate_course`/`generate_roadmap` deduplicate topics across saved analyses and order them
   by level.
@@ -130,6 +134,7 @@ export YOUTUBE_API_KEY="your-key-here"
 | `list_videos`              | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video |
 | `get_transcript`           | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch) — video/tweet/post/article/PDF, paginated with `offset`         |
 | `get_comments`             | Public YouTube/Instagram comments — for spotting FAQs, criticism, and requested content                                                        |
+| `get_content_ideas`        | Groups repeated audience requests into ranked content ideas — deterministic TF-IDF clustering, no embeddings/AI |
 | `get_video_heatmap`        | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                            |
 | `get_retention_moments`    | Joins the replay heatmap with the transcript by timestamp: what was actually said at the most/least rewatched moments — no manual cross-referencing |
 | `get_trending_videos`      | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                       |

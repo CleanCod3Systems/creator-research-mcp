@@ -48,6 +48,9 @@ export function registerCapabilitiesTool(server: McpServer): void {
             "(repeat list_videos/get_transcript); with a single measurement there's no time window, explained in 'limitations'",
           "analyze_creator/compare_creators are deterministic aggregation (medians, frequencies) — they do NOT detect " +
             "hooks/CTA/narrative on their own, that's done by the client LLM reading get_transcript of the outliers",
+          "get_content_ideas needs at least 5 comments and ≥2 comments sharing enough vocabulary to form a " +
+            "cluster — it's TF-IDF keyword matching, not semantic paraphrase detection, so very differently " +
+            "worded repeats of the same request may not group together",
         ],
       };
       return {

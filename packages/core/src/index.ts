@@ -5,3 +5,4 @@ export * from "./config/schema.js";
 export * from "./config/paths.js";
 export * from "./export/markdown.js";
 export * from "./domain/stats.js";
+export * from "./domain/clustering.js";
