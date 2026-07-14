@@ -44,6 +44,53 @@ against this file *before* building it, not after.
   npm. Never push a version tag without the user's explicit go-ahead for that specific version —
   a prior commit/push to `main` does not imply consent to also publish.
 
+## MCP tool design conventions
+
+Grounded in the [official MCP spec](https://modelcontextprotocol.io/specification/draft/server/tools)
+and community best practices (e.g. [awslabs/mcp design guidelines](https://github.com/awslabs/mcp/blob/main/DESIGN_GUIDELINES.md)),
+adapted to this repo's TypeScript/Zod stack. Follow these for every new tool; see the
+`add-mcp-tool` skill (`.claude/skills/add-mcp-tool/SKILL.md`) for the step-by-step recipe.
+
+- **Naming**: `snake_case`, verb_noun (`list_videos`, `get_transcript`). Letters, digits,
+  underscore, hyphen, dot only. Keep it under 64 characters to stay compatible with clients that
+  still enforce the older limit, even though the spec now allows up to 128.
+- **Descriptions carry instructions for the model, not just documentation.** Every tool
+  description in this repo already states its data source, what it does NOT do, and any
+  non-obvious usage hint (e.g. `get_transcript` telling the model to ground scripts in the
+  creator's real voice). Keep doing that — it's more effective than a separate style guide the
+  model has to remember, because it's right where the model decides whether to call the tool.
+- **Zod schema for `inputSchema`, always.** Every parameter needs a `.describe()` when its
+  purpose isn't obvious from the name alone.
+- **Annotations**: every tool in this repo is read-only and hits the open web/local disk, so new
+  tools should set
+  `annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true }`
+  in `registerTool`'s config object. None of the existing tools set this yet (a real gap found
+  2026-07-14) — define it inline per tool rather than as one shared constant, so a tool can
+  override the hint if it's ever not read-only.
+- **Errors**: distinguish protocol errors (let them throw — the SDK turns them into JSON-RPC
+  errors automatically) from *tool execution* errors (bad input, provider failure, unsupported
+  source). For the latter, this repo's convention is a JSON payload with an `error` code +
+  human-readable `message` field, e.g. `{ "error": "unsupported", "message": "..." }` — keep
+  using that shape for consistency across tools, and prefer it to throwing, since the model can
+  read the message and retry with different arguments.
+- **Never fabricate — the `limitations` pattern.** When a value can't be computed with
+  certainty, return `null` for that field and add a plain-English reason to a
+  `limitations: string[]` array in the payload, rather than omitting the field or guessing.
+  `packages/core/domain/stats.ts` (`computeGrowthMetrics`) is the reference implementation.
+- **Reuse before fetching.** Check `content.findIdByHash`/the relevant repository for a cached
+  result before hitting a provider again (see `get_comments`/`get_content_ideas` sharing the same
+  `CommentsRepository` cache). Never refetch data that's already in SQLite for the same
+  `content_hash`.
+- **Document the tool everywhere a human would look for it**: the tool table in both
+  `README.md` and `apps/mcp-server/README.md`, a bullet in "What it's for" if it answers a
+  concrete creator question, `docs/architecture.md` if it introduces a new domain module, and a
+  `knownLimitations` entry in `capabilities.ts` if it has a non-obvious failure mode.
+- **Tests**: pure logic (anything in `packages/core`) gets unit tests. Tools that just wire a
+  provider call together can stay untested if the wiring is trivial, but any non-trivial
+  transformation (like `retention.ts`'s `withTranscript` or `content-ideas.ts`'s
+  `buildContentIdeas`) should be exported and tested in isolation from the network-touching
+  handler.
+
 ## Architecture reference
 
 See [`docs/architecture.md`](docs/architecture.md) for the current system design and

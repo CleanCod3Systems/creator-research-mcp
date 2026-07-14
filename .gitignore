@@ -12,5 +12,7 @@ data/
 *.p12
 coverage/
 *.log
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 .serena/
