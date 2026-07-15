@@ -20,7 +20,9 @@ describe("getTrendingVideos", () => {
                 {
                   id: "abc123",
                   snippet: {
+                    channelId: "UCchannel1",
                     title: "Video en tendencia",
+                    description: "",
                     publishedAt: "2026-07-01T00:00:00Z",
                     tags: ["ia", "tech"],
                   },
@@ -38,7 +40,9 @@ describe("getTrendingVideos", () => {
     expect(videos).toHaveLength(1);
     expect(videos[0]).toEqual({
       id: "abc123",
+      channelId: "UCchannel1",
       title: "Video en tendencia",
+      description: "",
       publishedAt: "2026-07-01T00:00:00Z",
       durationSec: 630,
       viewCount: 5_000_000,

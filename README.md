@@ -156,6 +156,11 @@ occasionally come back `null`). With a free key from the
 - `list_videos` returns exact likes, real SEO tags, and no nulls (1 quota unit per batch of 50
   videos — the free 10,000/day quota is more than enough)
 - `get_trending_videos` becomes available (what's currently trending on YouTube by region/category)
+- `search_youtube_videos` becomes available (keyword search across all of YouTube, not just one
+  channel — costs 100 quota units per call, so ~100 searches/day on the free quota)
+- `get_channel_about`, `get_channel_monetization`, and `search_viral_videos` become available
+  (channel bio/stats, deterministic non-AdSense monetization detection, and cross-channel outlier
+  search)
 
 ```bash
 export YOUTUBE_API_KEY="your-key-here"
@@ -173,6 +178,10 @@ export YOUTUBE_API_KEY="your-key-here"
 | `get_video_heatmap`       | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                                                    |
 | `get_retention_moments`   | Joins the replay heatmap with the transcript by timestamp: what was actually said at the most/least rewatched moments — no manual cross-referencing                     |
 | `get_trending_videos`     | Official YouTube trending by region/category (requires `YOUTUBE_API_KEY`)                                                                                               |
+| `search_youtube_videos`   | Keyword search across all of YouTube, not limited to one channel — filter by order/duration/recency (requires `YOUTUBE_API_KEY`)                                        |
+| `get_channel_about`       | A channel's About page: name, description, subscriber/view/video counts, country, join date, keywords (requires `YOUTUBE_API_KEY`)                                      |
+| `get_channel_monetization`| Deterministic, evidence-based detection of non-AdSense monetization (courses, memberships, affiliate links, merch, sponsorships...) from About + video descriptions — text/URL matching, not AI (requires `YOUTUBE_API_KEY`) |
+| `search_viral_videos`     | Searches a topic and ranks results by outlierScore = views ÷ that channel's own lifetime average views per video (requires `YOUTUBE_API_KEY`)                           |
 | `get_metrics_history`     | Historical snapshots for a URL + real growth (viewsPerDay, engagementPerView) between the first and last measurement — needs ≥2 measurements                            |
 | `import_profile_snapshot` | Manually records followers/posts/likes/comments for a profile with no automated listing (e.g. Instagram) — feeds the same history above                                 |
 | `analyze_creator`         | Deterministic stats for a channel: median views/duration, publish cadence, keywords, performance by format, outliers                                                    |

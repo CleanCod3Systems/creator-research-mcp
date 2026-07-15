@@ -6,3 +6,4 @@ export * from "./config/paths.js";
 export * from "./export/markdown.js";
 export * from "./domain/stats.js";
 export * from "./domain/clustering.js";
+export * from "./domain/monetization.js";

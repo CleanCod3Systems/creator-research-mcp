@@ -12,7 +12,19 @@ export {
   fetchMostReplayedHeatmap,
   type HeatmapPoint,
 } from "./youtube-heatmap.js";
-export { getTrendingVideos, type YoutubeApiVideo } from "./youtube-api.js";
+export {
+  getTrendingVideos,
+  searchVideos,
+  getChannelAbout,
+  getChannelsStats,
+  getVideosStats,
+  listUploadIds,
+  resolveUploadsPlaylistId,
+  resolveChannelRef,
+  type YoutubeApiVideo,
+  type YoutubeChannelAbout,
+  type YoutubeChannelStats,
+} from "./youtube-api.js";
 export {
   getYtDlpVersion,
   pickFallbackAudioFormat,

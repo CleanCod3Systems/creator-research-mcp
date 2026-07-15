@@ -77,6 +77,12 @@ Dependency direction is one-way: `mcp-server → providers → core`, and `db �
   cosine similarity over shared vocabulary — deterministic, no embeddings, no model. Powers
   `get_content_ideas`. Honest about its own limits: it catches literal/near-literal repeats, not
   purely semantic paraphrases with no word overlap.
+- **`domain/monetization.ts`** — `detectMonetization(texts)`: pattern-matches a fixed v1 list of
+  known monetization-platform domains (Gumroad, Patreon, Teachable, Substack...) and common
+  phrasing ("sponsored by", "book a call") against a channel's About description plus its recent
+  video descriptions. Powers `get_channel_monetization`. Deterministic text/URL matching, not a
+  classifier model — only reports a method it found literal evidence for, with the matching
+  excerpt and source, per the never-fabricate rule.
 - **`ports/provider.ts`** — the `ContentProvider` interface every adapter implements:
   `matches(url)`, `classify(url)`, `capabilities()`, `fetchMetadata`, `fetchText`, and the
   optional `listItems`/`fetchComments`. `ProviderCapabilities.reliability` is one of

@@ -61,6 +61,16 @@ export function registerCapabilitiesTool(server: McpServer): void {
           "get_content_ideas needs at least 5 comments and ≥2 comments sharing enough vocabulary to form a " +
             "cluster — it's TF-IDF keyword matching, not semantic paraphrase detection, so very differently " +
             "worded repeats of the same request may not group together",
+          "get_channel_about/get_channel_monetization/search_viral_videos only accept a full channel URL, a " +
+            "bare @handle, or a raw channel ID (UC...) — legacy vanity URLs (/c/name, /user/name) aren't " +
+            "resolvable via the Data API and are rejected",
+          "get_channel_monetization is deterministic pattern-matching against a fixed v1 list of known " +
+            "platforms/phrasing in About + sampled video descriptions, not an AI classifier — a method not " +
+            "mentioned in that text (verbal-only sponsor reads, on-screen-only merch, a niche storefront not " +
+            "on the list) won't be detected even if it's the channel's main monetization method",
+          "search_viral_videos' outlierScore compares a video's views to its OWN channel's lifetime average " +
+            "(all uploads ever, not a recent-only baseline) — a channel that changed format/niche partway " +
+            "through its history can show a skewed score",
         ],
       };
       return {
