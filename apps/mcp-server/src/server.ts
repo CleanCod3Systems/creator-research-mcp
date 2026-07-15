@@ -20,7 +20,7 @@ import { registerImportProfileSnapshotTool } from "./tools/import-profile.js";
 import { registerAnalyzeCreatorTool, registerCompareCreatorsTool } from "./tools/creator-analysis.js";
 
 export const SERVER_NAME = "creator-research";
-export const SERVER_VERSION = "0.8.0";
+export const SERVER_VERSION = "0.5.0";
 
 /**
  * Client-reasoning-only mode: the server fetches data (transcript, comments, stats),
