@@ -7,7 +7,13 @@ import type {
   ProviderCapabilities,
   TextPayload,
 } from "@cleancod3/core";
-import { dumpComments, dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
+import {
+  dumpComments,
+  dumpFlatPlaylist,
+  dumpInfo,
+  pickFallbackAudioFormat,
+  type YtDlpInfo,
+} from "./ytdlp.js";
 import { textFromInfo } from "./subtitles.js";
 import { getVideosStats, listUploadIds, resolveUploadsPlaylistId } from "./youtube-api.js";
 
@@ -140,6 +146,11 @@ export class YouTubeProvider implements ContentProvider {
       thumbnailUrl: info.thumbnail,
       mediaType: info.media_type,
       availability: info.availability,
+      width: info.width ?? undefined,
+      height: info.height ?? undefined,
+      fps: info.fps ?? undefined,
+      resolution: info.resolution ?? undefined,
+      audioUrl: pickFallbackAudioFormat(info.formats)?.url,
       raw: info as unknown as Record<string, unknown>,
     };
   }
@@ -162,6 +173,7 @@ export class YouTubeProvider implements ContentProvider {
       }));
   }
 
+  /** Lists channel videos: strategy recent = upload order; top = by views. */
   /** Lists channel videos: strategy recent = upload order; top = by views. */
   async listItems(url: string, strategy: "top" | "recent", n: number): Promise<ChannelItem[]> {
     const u = new URL(url);

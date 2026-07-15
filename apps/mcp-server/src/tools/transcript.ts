@@ -24,6 +24,10 @@ export interface MetadataDetails {
   mediaItems: RelatedMediaItem[] | null;
   isCarousel: boolean | null;
   itemCount: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+  resolution: string | null;
   fetchedAt: string | null;
 }
 
@@ -41,6 +45,10 @@ export function buildMetadataDetails(
     mediaItems: meta.mediaItems ?? null,
     isCarousel: meta.isCarousel ?? null,
     itemCount: meta.itemCount ?? null,
+    width: meta.width ?? null,
+    height: meta.height ?? null,
+    fps: meta.fps ?? null,
+    resolution: meta.resolution ?? null,
     fetchedAt,
   };
 }
@@ -205,11 +213,62 @@ async function fetchOne(
     };
   }
   if (!text) {
+    if (!meta.audioUrl) {
+      return {
+        url: ref.url,
+        error: "no_text_available",
+        message:
+          "The source has no direct text (no subtitles, no extractable article). Try another video/URL.",
+      };
+    }
+    const cacheFetchedAt = new Date().toISOString();
+    const contentItemId = content.upsertContentItem({
+      sourceType: kind === "short" ? "short" : "video",
+      provider: provider.name,
+      url: ref.url,
+      filePath: ref.filePath,
+      canonicalUrl: ref.url ? canonicalizeUrl(ref.url) : undefined,
+      contentHash: hash,
+      title: meta.title,
+      description: meta.description,
+      durationSec: meta.durationSec,
+      publishedAt: meta.publishedAt,
+      language: meta.language,
+      rawMetadata: {
+        ...meta.raw,
+        [NORMALIZED_METADATA_KEY]: buildMetadataDetails(meta, cacheFetchedAt),
+      },
+    });
+    if (
+      meta.viewCount !== undefined ||
+      meta.likeCount !== undefined ||
+      meta.commentCount !== undefined
+    ) {
+      getMetricsRepo().recordSnapshot(
+        contentItemId,
+        {
+          viewCount: meta.viewCount ?? null,
+          likeCount: meta.likeCount ?? null,
+          commentCount: meta.commentCount ?? null,
+        },
+        provider.name,
+      );
+    }
     return {
       url: ref.url,
       error: "no_text_available",
       message:
-        "The source has no direct text (no subtitles, no extractable article). Try another video/URL.",
+        "No captions/subtitles were found, but an audio_url is provided so you (the client) can " +
+        "transcribe it yourself if you want a transcript.",
+      audioUrl: meta.audioUrl,
+      title: meta.title,
+      metadata: buildMetadataDetails(meta, cacheFetchedAt),
+      limitations: [
+        ...buildMetadataLimitations(meta),
+        "audio_url is best-effort: it's a signed URL from the source platform that typically expires " +
+          "within hours, and may require the original request's headers/IP to be fetchable from a " +
+          "different network. This server never transcribes it itself.",
+      ],
     };
   }
   const cacheFetchedAt = new Date().toISOString();

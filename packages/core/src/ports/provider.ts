@@ -34,6 +34,17 @@ export interface ContentMetadata {
   mediaItems?: RelatedMediaItem[];
   isCarousel?: boolean;
   itemCount?: number;
+  /** Video technical metadata, when the provider has it at hand (yt-dlp-backed providers). */
+  width?: number;
+  height?: number;
+  fps?: number;
+  resolution?: string;
+  /**
+   * Best-effort audio-only stream URL, provided when there's no transcript available so the
+   * client can fetch/transcribe it itself. Best-effort only: yt-dlp-signed URLs typically expire
+   * within hours and may require the original request headers/IP to be fetchable.
+   */
+  audioUrl?: string;
   limitations?: string[];
   raw: Record<string, unknown>;
 }

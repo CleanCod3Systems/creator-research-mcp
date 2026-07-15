@@ -7,7 +7,7 @@ import type {
   TextPayload,
 } from "@cleancod3/core";
 import { textFromInfo } from "./subtitles.js";
-import { dumpComments, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
+import { dumpComments, dumpInfo, pickFallbackAudioFormat, type YtDlpInfo } from "./ytdlp.js";
 
 const HOSTS = ["instagram.com", "www.instagram.com", "m.instagram.com"];
 
@@ -79,6 +79,11 @@ export class InstagramProvider implements ContentProvider {
       thumbnailUrl: info.thumbnail,
       mediaType: info.media_type,
       availability: info.availability,
+      width: info.width ?? undefined,
+      height: info.height ?? undefined,
+      fps: info.fps ?? undefined,
+      resolution: info.resolution ?? undefined,
+      audioUrl: pickFallbackAudioFormat(info.formats)?.url,
       mediaItems: relatedMediaItems(info.entries),
       isCarousel: info.entries ? info.entries.length > 1 : undefined,
       itemCount: info.entries?.length,

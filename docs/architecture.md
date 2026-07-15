@@ -30,6 +30,13 @@ Consequences of this design:
   (medians, outlier detection, keyword frequency, prerequisite ordering) — never a model call.
   Where real interpretation is needed (spotting a hook, judging a narrative structure), the
   tool explicitly tells the client LLM to read the actual transcript via `get_transcript`.
+- When a video has no captions/subtitles at all, `get_transcript` may return a best-effort
+  `audioUrl` (a direct stream URL yt-dlp already resolved) instead of fabricating a transcript —
+  the server still never transcribes anything; the client can fetch/transcribe it if it wants to.
+  This URL is best-effort only: it typically expires within hours and may require the original
+  request's headers/IP to be fetchable from a different network. `get_transcript`'s metadata
+  also carries basic video technical fields (`width`, `height`, `fps`, `resolution`) when the
+  provider is yt-dlp-backed — no ffprobe/ffmpeg involved, these are already in yt-dlp's JSON dump.
 
 ## Monorepo layout
 

@@ -20,7 +20,22 @@ describe("metadata details", () => {
       mediaItems: null,
       isCarousel: true,
       itemCount: 3,
+      width: null,
+      height: null,
+      fps: null,
+      resolution: null,
       fetchedAt: null,
+    });
+  });
+
+  it("preserves video technical metadata when the provider has it", () => {
+    expect(
+      buildMetadataDetails({ width: 1920, height: 1080, fps: 30, resolution: "1920x1080" }),
+    ).toMatchObject({
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      resolution: "1920x1080",
     });
   });
 });

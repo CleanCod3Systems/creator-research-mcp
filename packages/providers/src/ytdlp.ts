@@ -7,6 +7,24 @@ const YTDLP_BIN = process.env.YTDLP_PATH ?? "yt-dlp";
 const EXTRA_ARGS = (process.env.YTDLP_EXTRA_ARGS ?? "").split(" ").filter(Boolean);
 const TIMEOUT_MS = 60_000;
 
+export interface YtDlpFormat {
+  format_id?: string;
+  ext?: string;
+  vcodec?: string;
+  acodec?: string;
+  resolution?: string;
+  width?: number | null;
+  height?: number | null;
+  fps?: number | null;
+  tbr?: number | null;
+  abr?: number | null;
+  filesize?: number | null;
+  filesize_approx?: number | null;
+  url?: string;
+  protocol?: string;
+  format_note?: string;
+}
+
 export interface YtDlpInfo {
   id: string;
   title: string;
@@ -29,6 +47,11 @@ export interface YtDlpInfo {
   automatic_captions?: Record<string, { url: string; ext: string }[]>;
   webpage_url?: string;
   entries?: YtDlpEntry[];
+  width?: number | null;
+  height?: number | null;
+  fps?: number | null;
+  resolution?: string | null;
+  formats?: YtDlpFormat[];
 }
 
 export interface YtDlpEntry {
@@ -129,4 +152,31 @@ export async function dumpComments(
   );
   const data = JSON.parse(stdout) as { comments?: YtRawComment[] };
   return data.comments ?? [];
+}
+
+/**
+ * Picks a fallback audio stream when there are no subtitles: audio-only formats first
+ * (highest bitrate), otherwise the lowest-bitrate muxed format. Never downloads anything —
+ * only returns the URL yt-dlp already resolved so the client can fetch/transcribe it itself.
+ */
+export function pickFallbackAudioFormat(formats?: YtDlpFormat[]): YtDlpFormat | null {
+  if (!formats?.length) return null;
+  const withUrl = formats.filter((f) => Boolean(f.url));
+  const audioOnly = withUrl.filter((f) => f.vcodec === "none" && f.acodec && f.acodec !== "none");
+  if (audioOnly.length) {
+    return [...audioOnly].sort((a, b) => (b.abr ?? 0) - (a.abr ?? 0))[0] ?? null;
+  }
+  const muxed = withUrl.filter((f) => f.vcodec !== "none" && f.acodec && f.acodec !== "none");
+  if (!muxed.length) return null;
+  return [...muxed].sort((a, b) => (a.tbr ?? Infinity) - (b.tbr ?? Infinity))[0] ?? null;
+}
+
+/** Detected yt-dlp binary version, or null if it's not installed/reachable. */
+export async function getYtDlpVersion(): Promise<string | null> {
+  try {
+    const { stdout } = await exec(YTDLP_BIN, ["--version"], { timeout: 5_000 });
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
 }

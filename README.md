@@ -67,6 +67,11 @@ for the full design.
 Everyone runs **their own copy**, with **their own credentials** — there is no shared server
 and no data is centralized anywhere.
 
+Keep `yt-dlp` updated (`pip install -U yt-dlp` / `brew upgrade yt-dlp`) — most TikTok/Instagram
+extraction failures are fixed upstream within days by a new yt-dlp release, not by a code change
+here. The `capabilities` tool reports the detected `ytDlpVersion` so you can check it against
+[yt-dlp's releases](https://github.com/yt-dlp/yt-dlp/releases).
+
 ### Option 1 — npx (recommended, no cloning)
 
 ```json
@@ -162,7 +167,7 @@ export YOUTUBE_API_KEY="your-key-here"
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `capabilities`            | Enabled providers, honest limitations, and whether `YOUTUBE_API_KEY` is active                                                                                          |
 | `list_videos`             | Videos of a channel (YouTube/TikTok) with views, duration, outlier score (median+MAD, not just average) and tags. Records a historical snapshot per video               |
-| `get_transcript`          | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch), with `refresh` for stale cache — video/tweet/post/article/PDF, paginated with `offset` |
+| `get_transcript`          | Text + metadata + engagement for one or more URLs (`urls`, up to 15 in a batch), with `refresh` for stale cache — video/tweet/post/article/PDF, paginated with `offset`. No captions? Returns a best-effort `audioUrl` instead (client transcribes if it wants to; the server never does) |
 | `get_comments`            | Public YouTube/Instagram comments with cache age and optional `refresh` — for spotting FAQs, criticism, and requested content                                           |
 | `get_content_ideas`       | Groups repeated audience requests into ranked content ideas — deterministic TF-IDF clustering, no embeddings/AI                                                         |
 | `get_video_heatmap`       | A YouTube video's "most replayed" graph: which seconds the audience rewinds the most                                                                                    |

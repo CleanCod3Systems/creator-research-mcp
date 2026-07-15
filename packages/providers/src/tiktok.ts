@@ -7,7 +7,7 @@ import type {
   TextPayload,
 } from "@cleancod3/core";
 import { textFromInfo } from "./subtitles.js";
-import { dumpFlatPlaylist, dumpInfo, type YtDlpInfo } from "./ytdlp.js";
+import { dumpFlatPlaylist, dumpInfo, pickFallbackAudioFormat, type YtDlpInfo } from "./ytdlp.js";
 
 const HOSTS = ["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"];
 
@@ -67,6 +67,11 @@ export class TikTokProvider implements ContentProvider {
       viewCount: info.view_count ?? undefined,
       likeCount: info.like_count ?? undefined,
       commentCount: info.comment_count ?? undefined,
+      width: info.width ?? undefined,
+      height: info.height ?? undefined,
+      fps: info.fps ?? undefined,
+      resolution: info.resolution ?? undefined,
+      audioUrl: pickFallbackAudioFormat(info.formats)?.url,
       raw: info as unknown as Record<string, unknown>,
     };
   }

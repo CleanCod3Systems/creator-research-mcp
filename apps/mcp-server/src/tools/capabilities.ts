@@ -5,6 +5,7 @@ import {
   loadYamlConfigOrDefault,
   resolveConfigPathOrNull,
 } from "@cleancod3/core";
+import { getYtDlpVersion } from "@cleancod3/providers";
 
 /**
  * Introspection tool: what this server can and can NOT do.
@@ -20,25 +21,32 @@ export function registerCapabilitiesTool(server: McpServer): void {
         "and the known limitations. Check BEFORE promising analysis of a source.",
       inputSchema: {},
     },
-    () => {
+    async () => {
       const { providers } = loadYamlConfigOrDefault(
         resolveConfigPathOrNull("providers.yaml"),
         ProvidersFile,
         DEFAULT_PROVIDERS,
       );
+      const ytDlpVersion = await getYtDlpVersion();
       const payload = {
         server: "creator-research",
         mode: "client-reasoning: this server fetches data (transcript, comments, stats); the analysis is done by the client LLM",
         providers,
         youtubeApiKeyConfigured: Boolean(process.env.YOUTUBE_API_KEY),
+        ytDlpVersion,
         knownLimitations: [
           "TikTok/Instagram/Twitter: best-effort extraction via yt-dlp/FxTwitter; can fail if the platform changes",
+          "TikTok/Instagram extraction fragility is usually an outdated yt-dlp binary, not a bug in this server — " +
+            "update with 'pip install -U yt-dlp' or 'brew upgrade yt-dlp' and compare 'ytDlpVersion' above against " +
+            "https://github.com/yt-dlp/yt-dlp/releases",
           "Instagram: public individual post/reel URLs only; authentication, cookie export, and login bypass are not supported",
           "Instagram stories/highlights can expire or become inaccessible after extraction; image-only posts may have no text beyond their caption",
           "LinkedIn: public posts/articles only; no extraction possible behind an authwall",
           "Twitter/X: individual public tweets only; profiles and replies are out of scope",
           "Content behind paywall/DRM: out of scope by design",
-          "Videos without subtitles: no automatic transcription is available; try other content",
+          "Videos without subtitles: no automatic transcription is available; get_transcript may " +
+            "return a best-effort audio_url instead (client-side transcription only, never done by " +
+            "this server) — it can expire within hours and may not be fetchable from another network",
           "Without YOUTUBE_API_KEY: list_videos uses yt-dlp (views are fine, no exact likes, sometimes null)",
           "get_video_heatmap: best-effort, very new videos or ones with few views don't have enough data",
           "get_retention_moments: needs both heatmap data and subtitles/captions for the same video — " +

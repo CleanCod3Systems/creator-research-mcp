@@ -13,3 +13,9 @@ export {
   type HeatmapPoint,
 } from "./youtube-heatmap.js";
 export { getTrendingVideos, type YoutubeApiVideo } from "./youtube-api.js";
+export {
+  getYtDlpVersion,
+  pickFallbackAudioFormat,
+  type YtDlpFormat,
+  type YtDlpInfo,
+} from "./ytdlp.js";
