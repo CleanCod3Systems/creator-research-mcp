@@ -1,0 +1,364 @@
+[
+  {
+    "id": "Jh3G5doEKgldq2l0",
+    "name": "My workflow",
+    "description": null,
+    "active": true,
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "creator-research",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -224,
+          -288
+        ],
+        "id": "46ec62e8-bfe1-4c94-b523-087a468b7e57",
+        "name": "Webhook",
+        "webhookId": "5aee2477-d661-402f-a1e5-e397004cccdb"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body=$json.body||$json||{};const raw=Array.isArray(body.profile_urls)?body.profile_urls:Array.isArray(body.urls)?body.urls:String(body.profile_url||'').split(',').map(v=>v.trim()).filter(Boolean);const clean=value=>{let s=String(value).trim();s=s.split('?')[0].split('#')[0];while(s.endsWith('/'))s=s.slice(0,-1);return s};const urls=[...new Set(raw.map(clean).filter(v=>v.startsWith('http://')||v.startsWith('https://')))];return urls.map(profile_url=>({json:{profile_url,target_market:body.target_market||'Paraguay',reference_scope:'global',mode:body.mode||'deep',strategy:body.strategy||'top',limit:Number(body.limit||5),batch_key:body.batch_key||''}}));"
+        },
+        "id": "expand-profile-urls",
+        "name": "Expand Profile URLs",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          0,
+          -288
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://bridge:3334/analyze",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({profile_url:$json.profile_url,mode:$json.mode||'deep',strategy:$json.strategy||'top',limit:$json.limit||5}) }}",
+          "options": {
+            "timeout": 600000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          224,
+          -288
+        ],
+        "id": "n8n-bridge-analyze",
+        "name": "Analyze Public Profile"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "models/gemini-3-flash-preview"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={{ \"Devuelve solo JSON válido con: resumen_ejecutivo, hechos_observados[{hecho,evidencia,fuenteUrl}], temas_oportunidad[{tema,problema,evidencia,plataformas,prioridad}], senales_audiencia[{senal,evidencia,limite}], aprendizajes[{title,statement,evidence}], ideas_reels_priorizadas[]. Genera exactamente 10 briefs accionables distintos en ideas_reels_priorizadas cuando exista al menos una fuente o contenido acumulado; distribúyelos por los formatos pertinentes sin repetir ángulo, problema ni título. Cada brief debe estar relacionado con FRONTEND o IA aplicada al FRONTEND y contener platform (Instagram o YouTube), format (Reel, Publicación, Short o Video), titleOptions con exactamente 3 títulos humanizados y específicos, problem, whyNow, evidenceSummary, paraguayanAngle, promise, spokenHook, visualHook, scriptBeats como array de 4-6 pasos con segundos, visualPlan como array de escenas, onScreenText, caption, cta, hashtags, durationSec, effort, confidence 0-1, scores, validationMetric, sourceCreatorNames, sourceUrls, sourceContentIds y evidence. Instagram Reel 20-45s; YouTube Short 30-60s; YouTube Video 4-10min. No conviertas una referencia sobre una herramienta general en una propuesta sobre esa herramienta: tradúcela a React, Next.js, Vite, HTML/CSS/JS, UI, accesibilidad, performance, testing o automatización frontend. Usa únicamente evidencia recibida. No copies títulos observados. Capas de contenido obligatorias: contentLayers.spoken es lo que se detectó en el AUDIO; contentLayers.description es la descripción/caption; contentLayers.comments son señales de audiencia. No llames transcripción a la descripción. Si spoken.status no es available, escribe audio no disponible y no infieras lo hablado. Usa spoken para hook, tensión, estructura y escenas; description para contexto, CTA y hashtags; comentarios para objeciones y lenguaje real. Estudio:\" + JSON.stringify($node[\"Aggregate Research Context\"].json.research) + \" Biblioteca acumulada y feedback histórico:\" + JSON.stringify($json) }}"
+              }
+            ]
+          },
+          "jsonOutput": true,
+          "builtInTools": {
+            "googleSearch": false,
+            "urlContext": false,
+            "codeExecution": false
+          },
+          "options": {
+            "systemMessage": "Eres director de contenido de CleanCod3. Responde siempre en español, con tono directo, práctico, técnico y humano, desde Paraguay. El nicho obligatorio es FRONTEND: HTML/CSS/JavaScript, React, Next.js, Vite, UI, accesibilidad, performance, testing, debugging, arquitectura de componentes, automatización y uso de IA aplicado a construir y mantener interfaces web. Tu trabajo NO es copiar el tema del referente: usa sus evidencias para descubrir patrones y traducirlos al objetivo editorial de CleanCod3. Cada propuesta debe enseñar o resolver algo que un desarrollador frontend pueda aplicar en un proyecto real. Si el referente habla de una herramienta de IA general, conviértela a un caso frontend agnóstico usando el editor o terminal que el usuario ya tenga, APIs gratuitas/open source o herramientas accesibles. No uses Cursor como requisito ni generes propuestas sobre Cursor, precios de Cursor, másteres, carrera general o backend aislado. No inventes datos de Paraguay; marca hipótesis cuando corresponda. No copies títulos observados ni uses frases genéricas como Así uso IA para. Si no hay evidencia suficiente para una idea frontend, devuelve ideas_reels_priorizadas:[] y explica qué dato falta. Un brief debe ser ejecutable y conservar sus URLs fuente. Revisa el feedback histórico: los briefs seleccionados muestran preferencias; los descartados son anti-preferencias y no debes repetir su enfoque, herramienta, tema o formato. Si hay conflicto, prioriza las decisiones del usuario. Separa siempre audio hablado de caption: el audio es evidencia de lo dicho; la descripción no prueba que se haya hablado. Si el audio no está disponible, indica Datos insuficientes y no inventes hooks ni frases. La salida debe contener exactamente 10 briefs accionables distintos cuando exista evidencia en la biblioteca o en la investigación actual. Combina referencias globales con la biblioteca acumulada, pero traduce todo a problemas frontend aplicables en Paraguay.",
+            "maxOutputTokens": 5000
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.googleGemini",
+        "typeVersion": 1.2,
+        "position": [
+          448,
+          -288
+        ],
+        "id": "33f4a100-e62e-4907-b925-74f61fd2c567",
+        "name": "Gemini Intelligence",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "aTsYDAjBitbEf3Rs",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        },
+        "continueOnFail": true,
+        "retryOnFail": true,
+        "maxTries": 3,
+        "waitBetweenTries": 7000,
+        "executeOnce": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const b=$node[\"Webhook\"].json.body||$node[\"Webhook\"].json||{};const original=$node[\"Analyze Public Profile\"].json||{};const a=original.data||original;let ai=$json.output??$json.text??$json.response??$json.content?.parts?.[0]?.text??$json;const fence=String.fromCharCode(96,96,96);if(typeof ai==='string'){const clean=ai.replace(new RegExp('^\\\\s*'+fence+'json?\\\\s*','i'),'').replace(new RegExp('\\\\s*'+fence+'\\\\s*$','i'),'');const normalized=clean.replace(/(\"[^\"]+\":\\s+)([A-Za-zÁÉÍÓÚáéíóúÑñ¿][^,\\n]*)(,?)(?=\\n)/g,'$1\"$2\"$3');try{ai=JSON.parse(normalized)}catch{try{ai=JSON.parse(normalized.replace(/(\"[^\"]+\":\\s+)([A-Za-zÁÉÍÓÚáéíóúÑñ¿][^,\\n]*)(,?)(?=\\n)/g,'$1\"$2\"$3'))}catch{ai={}}}}if(ai?.json&&typeof ai.json==='object')ai=ai.json;if(Array.isArray(ai)){ai=ai.find(x=>x&&typeof x==='object')||{};}const s=v=>typeof v==='string'?v.trim():'';const ar=v=>Array.isArray(v)?v:[];const n=v=>Number.isInteger(Number(v))?Number(v):null;const src=String(original.source||a.source||b.profile_url||'');const creator=String(a.channel||a.authorHandle||a.creatorName||a.metadata?.authorHandle||a.metadata?.authorUrl?.split('/').filter(Boolean).pop()||src);const vids=ar(a.videos),deep=ar(a.deepInsights);const evidenceFor=i=>{const v=vids[i]||vids[0];const c=deep.flatMap(x=>ar(x?.comments?.comments)).find(x=>s(x?.text));const e=[];if(v&&(s(v.title)||v.views!=null||v.likes!=null||v.comments!=null))e.push({evidenceType:'metric',detail:{title:s(v.title),views:v.views??null,likes:v.likes??null,comments:v.comments??null},confidence:.8});const rd=a||{};const layers=rd.contentLayers||{};if(rd.views!=null||rd.likes!=null||rd.comments!=null)e.push({evidenceType:'metric',detail:{title:s(rd.title),views:rd.views??null,likes:rd.likes??null,comments:rd.comments??null},confidence:.85});const spoken=s(layers.spoken?.text);if(spoken)e.push({evidenceType:'spoken_audio',detail:{title:s(rd.title),language:layers.spoken?.language||null,model:layers.spoken?.model||null},quote:spoken.slice(0,1000),confidence:.9});const description=s(layers.description?.text)||s(rd.transcript?.text);if(description)e.push({evidenceType:'caption',detail:{title:s(rd.title)},quote:description.slice(0,500),confidence:.75});if(c)e.push({evidenceType:'comment',detail:{},quote:s(c.text),confidence:.7});return e};const p=v=>/youtube/i.test(String(v))?'YouTube':/instagram/i.test(String(v))?'Instagram':'';const f=(x,platform)=>{const v=s(x.format||x.formato);if(/short/i.test(v))return'Short';if(/video|vídeo/i.test(v))return'Video';if(/public|post|carrusel/i.test(v))return'Publicación';if(/reel/i.test(v))return'Reel';return platform==='YouTube'?'Short':'Reel'};const desiredCount=10;let ideas=ar(ai?.ideas_reels_priorizadas).map((x,i)=>{const platform=p(x.platform||x.red_social)||p(src);const titles=ar(x.titleOptions||x.titulos||x.opciones_titulo).map(s).filter(Boolean).slice(0,3);const urls=ar(x.sourceUrls||x.urls_fuente).map(String).filter(Boolean);if(!urls.length&&src)urls.push(src);const evidence=ar(x.evidence).length?ar(x.evidence):(typeof x.evidence==='string'&&s(x.evidence)?[{evidenceType:'observation',detail:{},quote:s(x.evidence),confidence:.7}]:evidenceFor(i));const namesRaw=x.sourceCreatorNames||x.creadores_fuente;const names=Array.isArray(namesRaw)?namesRaw.map(String).filter(Boolean):(s(namesRaw)?[s(namesRaw)]:[]);if(!names.length)names.push(creator);return{platform,format:f(x,platform),titleOptions:titles,problem:s(x.problem||x.problema_audiencia),whyNow:s(x.whyNow||x.por_que_ahora),evidenceSummary:s(x.evidenceSummary||x.evidencia),paraguayanAngle:s(x.paraguayanAngle||x.adaptacion_paraguay),promise:s(x.promise||x.promesa),spokenHook:s(x.spokenHook||x.gancho_hablado||x.gancho),visualHook:s(x.visualHook||x.gancho_visual),scriptBeats:ar(x.scriptBeats||x.guion_por_segundos),visualPlan:ar(x.visualPlan||x.plan_visual),onScreenText:ar(x.onScreenText||x.texto_en_pantalla).map(String),caption:s(x.caption||x.caption_instagram),cta:s(x.cta||x.llamada_a_la_accion),hashtags:ar(x.hashtags).map(String),durationSec:Number.isFinite(Number(x.durationSec))?Number(x.durationSec):null,effort:s(x.effort||x.esfuerzo)||null,confidence:Number(x.confidence)||0,scores:x.scores||x.puntuaciones||{},validationMetric:s(x.validationMetric||x.metrica_a_validar),sourceCreatorNames:names,sourceUrls:urls,sourceContentIds:ar(x.sourceContentIds).map(n).filter(v=>v!==null),evidence}}).filter(x=>x.platform&&x.titleOptions.length===3&&x.problem&&x.promise&&x.sourceUrls.length&&x.evidence.length&&(!/instagram\\.com\\/reel\\//i.test(src)||(x.platform==='Instagram'&&x.format==='Reel')));const batchResearch=Array.isArray($node[\"Aggregate Research Context\"]?.json?.research)?$node[\"Aggregate Research Context\"].json.research:[];\nconst sourceRows=batchResearch.map(r=>{const d=r.data||r;const layers=d.contentLayers||{};const spoken=layers.spoken||{};const caption=layers.description?.text||d.transcript?.text||'';return{url:String(r.source||d.url||src),creator:String(d.channel||d.authorHandle||d.metadata?.authorHandle||'creador no identificado'),text:String(spoken.status==='available'&&spoken.text?spoken.text:caption),evidenceType:spoken.status==='available'?'spoken_audio':'caption'}}).filter(r=>r.url&&r.text.trim());\nconst fallbackPatterns=[\n{topic:'Diseños de interfaz generados por IA sin sistema visual',titles:['Tu IA no diseña mal: le falta este sistema','El prompt no arregla una UI genérica','La diferencia entre una UI amateur y una UI usable'],problem:'La IA produce interfaces repetidas cuando no recibe referencias, tokens y reglas visuales.',promise:'Convertirás una pantalla genérica en una interfaz frontend con decisiones visuales verificables.',hook:'¿Tu IA entrega otra landing igual a todas? El problema puede estar antes del prompt.',angle:'Demostrarlo con una interfaz real de CleanCod3 y decisiones aplicables a proyectos locales.',metric:'Retención hasta la comparación antes/después y comentarios con casos reales.'},\n{topic:'Referencias visuales antes de generar componentes',titles:['Antes de pedir código, pasale esto a la IA','Una captura puede mejorar todo tu componente React','La IA necesita contexto visual, no otra orden'],problem:'Sin una referencia concreta, el componente generado no respeta jerarquía, espaciado ni identidad.',promise:'Aprenderás a preparar una referencia para que la IA genere un componente más consistente.',hook:'La IA no adivina tu diseño: dale una referencia que pueda obedecer.',angle:'Usar una pantalla de un negocio paraguayo como ejemplo y reconstruirla con React.',metric:'Guardados y comentarios de personas que prueben el mismo flujo.'},\n{topic:'Microinteracciones frontend con propósito',titles:['No agregues animaciones solo porque podés','Esta transición hace que tu UI se entienda mejor','Animación útil: una regla para no romper tu interfaz'],problem:'Las animaciones sin intención distraen y hacen que una interfaz parezca decorativa.',promise:'Aplicarás una microinteracción que comunica estado sin perjudicar accesibilidad.',hook:'Una animación bonita puede empeorar tu UI si no explica nada.',angle:'Mostrar un formulario o botón de una app real, con y sin feedback visual.',metric:'Retención durante la demo y respuestas sobre claridad de la interacción.'},\n{topic:'Auditoría de accesibilidad asistida por IA',titles:['La IA puede encontrar este error de accesibilidad','Tu botón funciona, pero ¿todos pueden usarlo?','Auditar una interfaz sin revisar línea por línea'],problem:'Errores de contraste, foco y nombres accesibles suelen quedar fuera de la revisión rápida.',promise:'Crearás una checklist reproducible para detectar fallas a11y en un componente.',hook:'Antes de publicar tu UI, hacé que la IA busque estos tres errores.',angle:'Auditar un componente de una app de servicio local sin usar herramientas pagas.',metric:'Guardados, comentarios con errores encontrados y validación manual posterior.'},\n{topic:'Componentes React con lógica mezclada',titles:['Este componente React ya pide una refactorización','No es Clean Code si el componente hace todo','Separá esta lógica antes de que crezca'],problem:'Componentes que mezclan datos, estado y presentación se vuelven difíciles de cambiar.',promise:'Separarás un componente real en piezas pequeñas sin cambiar su comportamiento.',hook:'Si para cambiar un botón tocás cinco cosas, mirá este componente.',angle:'Refactorizar una pantalla típica de dashboard de CleanCod3 paso a paso.',metric:'Comentarios de quienes tengan componentes grandes y comparación de cambios.'},\n{topic:'Tokens de diseño para generar frontend consistente',titles:['Dale tokens a la IA y dejá de corregir colores','Una variable puede evitar diez correcciones','La IA necesita reglas de diseño reutilizables'],problem:'Sin tokens, cada pantalla termina con colores y espaciados distintos.',promise:'Definirás tokens mínimos para que React y la IA mantengan coherencia visual.',hook:'Si corregís el mismo color en cada pantalla, te faltan tokens.',angle:'Construir una mini base visual con nombres y valores claros para un producto paraguayo.',metric:'Guardados y reutilización de los tokens en otra pantalla.'},\n{topic:'Performance de interfaces creadas con IA',titles:['Tu UI funciona, pero carga demasiado','Tres preguntas para revisar performance con IA','No aceptes este componente pesado generado por IA'],problem:'La velocidad se degrada cuando la IA agrega dependencias, imágenes o renders innecesarios.',promise:'Encontrarás los puntos pesados de una interfaz y priorizarás una mejora medible.',hook:'La IA te puede entregar una UI linda que carga mal: revisá esto.',angle:'Medir una pantalla con datos reales antes y después de optimizarla.',metric:'LCP, peso inicial y retención durante la explicación.'},\n{topic:'Vite y Next.js para proyectos frontend reales',titles:['No elijas Next.js por costumbre','Vite o Next: decidilo con este caso','La pregunta que define tu stack frontend'],problem:'Elegir framework por moda agrega complejidad innecesaria al proyecto.',promise:'Elegirás una base frontend según renderizado, rutas y necesidades reales.',hook:'Antes de crear otro proyecto, respondé esta pregunta sobre tu producto.',angle:'Comparar una landing y una app con datos simples desde la realidad de un proyecto local.',metric:'Comentarios con casos de uso y guardados para consultar al iniciar proyectos.'},\n{topic:'Skills de IA aplicadas a frontend',titles:['Una skill útil no te escribe cualquier componente','Convertí la IA en un revisor frontend','La diferencia entre prompt y flujo reutilizable'],problem:'Pedir tareas aisladas a la IA produce resultados inconsistentes y difíciles de repetir.',promise:'Crearás una instrucción reusable para revisar UI, accesibilidad y mantenimiento.',hook:'No le pidas a la IA que sea experta: definile cómo debe revisar tu frontend.',angle:'Construir una skill open source y probarla en un componente de CleanCod3.',metric:'Comentarios pidiendo la plantilla y resultados al repetir la prueba.'},\n{topic:'Testing de componentes generados por IA',titles:['No publiques código generado sin esta prueba','La IA creó el componente: ahora intentá romperlo','Un test simple evita confiar demasiado en la IA'],problem:'El código puede parecer correcto y fallar en estados vacíos, errores o interacción.',promise:'Agregarás pruebas para los estados que una demo rápida normalmente oculta.',hook:'La pantalla se ve bien, pero todavía no sabés si funciona.',angle:'Probar un componente frontend con estados reales de una app de comunidad.',metric:'Pruebas ejecutadas, fallos encontrados y comentarios técnicos.'}\n];\nlet fallbackUsed=false;if(ideas.length<desiredCount&&sourceRows.length){const generated=fallbackPatterns.map((p,i)=>{const row=sourceRows[i%sourceRows.length];const quote=row.text.slice(0,700);return{platform:'Instagram',format:'Reel',titleOptions:p.titles,problem:p.problem,whyNow:'La referencia analizada muestra una tensión concreta sobre '+p.topic+'. La adaptación frontend es una hipótesis que debe validarse.',evidenceSummary:'Fuente '+row.creator+': '+quote,paraguayanAngle:p.angle,promise:p.promise,spokenHook:p.hook,visualHook:'Comparación en pantalla: problema real, cambio aplicado y resultado verificable.',scriptBeats:['0-3s: mostrar el problema en una interfaz real.','3-12s: explicar la causa con la evidencia fuente.','12-32s: aplicar la solución frontend paso a paso.','32-42s: mostrar el resultado y pedir una prueba.'],visualPlan:['Captura del componente antes.','Código o configuración del cambio.','Resultado en navegador con métrica o estado visible.'],onScreenText:[p.topic,'Problema','Cambio','Resultado'],caption:p.promise+' Probalo en tu próximo componente y compará el resultado.',cta:'Comentá qué componente querés revisar y guardá el reel para probarlo.',hashtags:['#CleanCod3','#FrontendParaguay','#React','#IAParaFrontend','#DesarrolloWeb'],durationSec:42,effort:'medio',confidence:.55,scores:{evidence:.7,utility:.8,fitFrontend:.95},validationMetric:p.metric,sourceCreatorNames:[row.creator],sourceUrls:[row.url],sourceContentIds:[],evidence:[{evidenceType:row.evidenceType,detail:{topic:p.topic},quote,confidence:.75}]};});ideas=[...ideas,...generated].slice(0,desiredCount);fallbackUsed=true;}const learnings=ar(ai?.aprendizajes).filter(x=>s(x?.title)&&s(x?.statement)).map(x=>({title:s(x.title),statement:s(x.statement),evidence:x.evidence||[]}));const urls=ar(b.profile_urls).map(String).filter(Boolean);if(!urls.length&&src)urls.push(src);return[{json:{batchKey:String(b.batch_key||('n8n-'+String($execution.id||Date.now())+'-'+urls.join('|'))),inputUrls:urls,market:'Paraguay',language:'es',referenceScope:'global',status:ideas.length?'done':'partial',ideas,learnings,research:original,fallbackUsed,summary:s(ai?.resumen_ejecutivo),facts:ar(ai?.hechos_observados),signals:ar(ai?.senales_audiencia),opportunities:ar(ai?.temas_oportunidad)}}];"
+        },
+        "name": "Prepare Intelligence Payload",
+        "type": "n8n-nodes-base.code",
+        "id": "prepare-intelligence-payload",
+        "position": [
+          800,
+          -288
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://creator-research:3333/api/research/ideas",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "timeout": 120000
+          }
+        },
+        "name": "Persist Intelligence",
+        "type": "n8n-nodes-base.httpRequest",
+        "id": "persist-intelligence",
+        "position": [
+          1024,
+          -288
+        ]
+      },
+      {
+        "parameters": {
+          "url": "http://creator-research:3333/api/memory/pack",
+          "options": {
+            "timeout": 120000
+          }
+        },
+        "name": "Get Memory Pack",
+        "type": "n8n-nodes-base.httpRequest",
+        "id": "get-memory-pack",
+        "position": [
+          1248,
+          -288
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const p=$node[\"Prepare Intelligence Payload\"].json||{};const saved=$node[\"Persist Intelligence\"].json||{};const m=$json||{};return[{json:{ok:true,market:p.market,status:p.status,dataStatus:p.ideas?.length?'evidencia_suficiente':'datos_insuficientes',saved,ideas:p.ideas||[],learnings:p.learnings||[],summary:p.summary||'Datos insuficientes para un resumen verificable.',facts:p.facts||[],audienceSignals:p.signals||[],opportunities:p.opportunities||[],sources:p.inputUrls||[],memory:m.documents||m}}];"
+        },
+        "name": "Prepare Final Response",
+        "type": "n8n-nodes-base.code",
+        "id": "prepare-final-response",
+        "position": [
+          1472,
+          -288
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ $json }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1696,
+          -288
+        ],
+        "id": "n8n-respond",
+        "name": "Return Analysis"
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "http://creator-research:3333/api/feedback",
+          "options": {
+            "timeout": 120000
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          336,
+          -288
+        ],
+        "id": "get-feedback-memory",
+        "name": "Get Feedback Memory"
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForAllItems",
+          "jsCode": "const research=$items(\"Analyze Public Profile\").map(item=>item.json);return[{json:{research}}];"
+        },
+        "id": "88a46a71-92f5-4707-a262-8e25297d61f8",
+        "name": "Aggregate Research Context",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          360,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Expand Profile URLs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Expand Profile URLs": {
+        "main": [
+          [
+            {
+              "node": "Analyze Public Profile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Analyze Public Profile": {
+        "main": [
+          [
+            {
+              "node": "Aggregate Research Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gemini Intelligence": {
+        "main": [
+          [
+            {
+              "node": "Prepare Intelligence Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Intelligence Payload": {
+        "main": [
+          [
+            {
+              "node": "Persist Intelligence",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Persist Intelligence": {
+        "main": [
+          [
+            {
+              "node": "Get Memory Pack",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Memory Pack": {
+        "main": [
+          [
+            {
+              "node": "Prepare Final Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Final Response": {
+        "main": [
+          [
+            {
+              "node": "Return Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Return Analysis": {
+        "main": [
+          []
+        ]
+      },
+      "Get Feedback Memory": {
+        "main": [
+          [
+            {
+              "node": "Gemini Intelligence",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate Research Context": {
+        "main": [
+          [
+            {
+              "node": "Get Feedback Memory",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate",
+      "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": {
+      "templateCredsSetupCompleted": true
+    },
+    "nodeGroups": [],
+    "pinData": {},
+    "tags": [],
+    "shared": [
+      {
+        "updatedAt": "2026-07-15T15:20:46.603Z",
+        "createdAt": "2026-07-15T15:20:46.603Z",
+        "role": "workflow:owner",
+        "workflowId": "Jh3G5doEKgldq2l0",
+        "projectId": "VA7UMIuoJ4abbkwc",
+        "project": {
+          "updatedAt": "2026-07-15T15:15:49.941Z",
+          "createdAt": "2026-07-15T15:15:19.292Z",
+          "id": "VA7UMIuoJ4abbkwc",
+          "name": "Clean Cod3 <cleancod3@gmail.com>",
+          "type": "personal",
+          "icon": null,
+          "description": null,
+          "customTelemetryTags": [],
+          "creatorId": "9dc09843-1f18-429a-9e51-fc42ab7fb372"
+        }
+      }
+    ],
+    "versionMetadata": {
+      "name": null,
+      "description": null
+    }
+  }
+]

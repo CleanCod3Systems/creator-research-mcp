@@ -66,6 +66,7 @@ export function registerImportProfileSnapshotTool(server: McpServer): void {
           sourceType: "short",
           provider: platform,
           url: post.url,
+          creatorId,
           canonicalUrl: canonicalizeUrl(post.url),
           contentHash: hash,
           title: post.caption?.slice(0, 200) ?? post.url,
@@ -85,6 +86,10 @@ export function registerImportProfileSnapshotTool(server: McpServer): void {
         );
         return { url: post.url, contentItemId };
       });
+
+      // Mantiene el registro listo después de cada importación, sin depender de un reinicio.
+      profileRepo.consolidateCreators();
+      profileRepo.backfillContentCreators();
 
       return json({
         status: "imported",

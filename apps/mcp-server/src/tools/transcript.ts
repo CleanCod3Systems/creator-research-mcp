@@ -8,7 +8,7 @@ import {
 } from "@cleancod3/core";
 import { z } from "zod";
 import { cacheAgeSeconds } from "../cache.js";
-import { getContext, getMetricsRepo } from "../context.js";
+import { getContext, getMetricsRepo, getProfileRepo } from "../context.js";
 
 const MAX_CHARS_DEFAULT = 80_000;
 const MAX_BATCH = 15;
@@ -28,6 +28,7 @@ export interface MetadataDetails {
   height: number | null;
   fps: number | null;
   resolution: string | null;
+  audioUrl: string | null;
   fetchedAt: string | null;
 }
 
@@ -49,6 +50,7 @@ export function buildMetadataDetails(
     height: meta.height ?? null,
     fps: meta.fps ?? null,
     resolution: meta.resolution ?? null,
+    audioUrl: meta.audioUrl ?? null,
     fetchedAt,
   };
 }
@@ -212,6 +214,7 @@ async function fetchOne(
       message: err instanceof Error ? err.message : String(err),
     };
   }
+  const creatorId = getProfileRepo().ensureCreatorFromMetadata(provider.name, meta);
   if (!text) {
     if (!meta.audioUrl) {
       return {
@@ -229,6 +232,7 @@ async function fetchOne(
       filePath: ref.filePath,
       canonicalUrl: ref.url ? canonicalizeUrl(ref.url) : undefined,
       contentHash: hash,
+      creatorId: creatorId ?? undefined,
       title: meta.title,
       description: meta.description,
       durationSec: meta.durationSec,
@@ -288,6 +292,7 @@ async function fetchOne(
     filePath: ref.filePath,
     canonicalUrl: ref.url ? canonicalizeUrl(ref.url) : undefined,
     contentHash: hash,
+    creatorId: creatorId ?? undefined,
     title: meta.title,
     description: meta.description,
     durationSec: meta.durationSec,

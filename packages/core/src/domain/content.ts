@@ -25,6 +25,7 @@ export type AnalysisDepth = z.infer<typeof AnalysisDepth>;
 /** Strips tracking parameters and normalizes — idempotency key. */
 export function canonicalizeUrl(raw: string): string {
   const url = new URL(raw);
+  const host = url.hostname.toLowerCase();
   const tracking = [
     "utm_source",
     "utm_medium",
@@ -34,10 +35,30 @@ export function canonicalizeUrl(raw: string): string {
     "si",
     "feature",
     "fbclid",
+    "igsh",
+    "igshid",
+    "gclid",
+    "dclid",
+    "gbraid",
+    "wbraid",
+    "srsltid",
+    "mc_cid",
+    "mc_eid",
+    "ref_src",
+    "ab_channel",
+    "pp",
   ];
   for (const p of tracking) url.searchParams.delete(p);
+  // Social profile/content share links commonly carry opaque tracking queries.
+  // Keep YouTube's `v` because it identifies the video; discard the rest.
+  if (host === "instagram.com" || host.endsWith(".instagram.com")) {
+    url.search = "";
+  } else if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+    const videoId = url.searchParams.get("v");
+    url.search = videoId ? `?v=${encodeURIComponent(videoId)}` : "";
+  }
   url.hash = "";
-  url.hostname = url.hostname.toLowerCase();
+  url.hostname = host;
   return url.toString();
 }
 

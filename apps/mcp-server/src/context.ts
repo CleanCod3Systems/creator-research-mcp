@@ -11,6 +11,7 @@ import {
   CommentsRepository,
   ContentRepository,
   GenerationRepository,
+  IntelligenceRepository,
   MetricsRepository,
   ProfileRepository,
   SearchRepository,
@@ -31,7 +32,9 @@ import { dirname, isAbsolute, resolve } from "node:path";
 
 export interface AppContext {
   config: AppConfig;
+  db: ReturnType<typeof createDb>;
   analysisRepo: AnalysisRepository;
+  intelligenceRepo: IntelligenceRepository;
   content: ContentRepository;
   providers: ContentProvider[];
 }
@@ -42,6 +45,13 @@ let commentsRepo: CommentsRepository | null = null;
 let genRepo: GenerationRepository | null = null;
 let metricsRepo: MetricsRepository | null = null;
 let profileRepo: ProfileRepository | null = null;
+let intelligenceRepo: IntelligenceRepository | null = null;
+
+export function getIntelligenceRepo(): IntelligenceRepository {
+  getContext();
+  if (!intelligenceRepo) throw new Error("contexto no inicializado");
+  return intelligenceRepo;
+}
 
 export function getSearchRepo(): SearchRepository {
   getContext();
@@ -88,9 +98,14 @@ export function getContext(): AppContext {
   genRepo = new GenerationRepository(db);
   metricsRepo = new MetricsRepository(db);
   profileRepo = new ProfileRepository(db);
+  intelligenceRepo = new IntelligenceRepository(db);
+  profileRepo.consolidateCreators();
+  profileRepo.backfillContentCreators();
   ctx = {
     config,
+    db,
     analysisRepo: new AnalysisRepository(db),
+    intelligenceRepo,
     content: new ContentRepository(db),
     // order = matching priority: specific providers first, web as the http catch-all
     providers: [

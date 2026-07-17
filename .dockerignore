@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+dist
+.turbo
+.venv-whisper
+.env
+.env.*
+!.env.example
+data/*
+backups
+n8n-data
+*.db
+*.db-*
+coverage
+*.log

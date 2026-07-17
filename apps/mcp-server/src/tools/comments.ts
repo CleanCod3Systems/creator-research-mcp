@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { canonicalizeUrl, sourceHash } from "@cleancod3/core";
 import { z } from "zod";
 import { cacheAgeSeconds } from "../cache.js";
-import { getCommentsRepo, getContext } from "../context.js";
+import { getCommentsRepo, getContext, getProfileRepo } from "../context.js";
 
 /**
  * Client-reasoning mode for comments: the server fetches them where a provider explicitly supports
@@ -65,12 +65,15 @@ export function registerCommentsTool(server: McpServer): void {
       let fetched;
       try {
         meta = await provider.fetchMetadata(url);
+        const creatorId = getProfileRepo().ensureCreatorFromMetadata(provider.name, meta);
+        if (creatorId && contentItemId !== null) content.updateContentItem(contentItemId, { creatorId });
         contentItemId ??= content.upsertContentItem({
           sourceType: "video",
           provider: provider.name,
           url,
           canonicalUrl: canonicalizeUrl(url),
           contentHash: hash,
+          creatorId: creatorId ?? undefined,
           title: meta.title,
           durationSec: meta.durationSec,
           rawMetadata: meta.raw,

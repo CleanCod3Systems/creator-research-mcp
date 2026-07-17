@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { canonicalizeUrl, detectOutlier, sourceHash } from "@cleancod3/core";
 import { z } from "zod";
-import { getContext, getMetricsRepo } from "../context.js";
+import { getContext, getMetricsRepo, getProfileRepo } from "../context.js";
 
 /**
  * Client-reasoning mode: deterministic channel statistics, no AI of its own.
@@ -40,13 +40,16 @@ export function registerListVideosTool(server: McpServer): void {
         });
       }
       const items = await provider.listItems(url, strategy, limit);
+      const platform = provider.name.toLowerCase();
+      const handle = url.match(/youtube\.com\/@([^/?]+)/i)?.[1] ?? url.match(/youtube\.com\/channel\/([^/?]+)/i)?.[1];
+      const creatorId = handle ? getProfileRepo().upsertCreator({ platform, handle, name: handle, url }) : null;
       const totalViews = items.reduce((s, i) => s + (i.viewCount ?? 0), 0);
       const viewCounts = items.map((i) => i.viewCount ?? 0);
       const metricsRepo = getMetricsRepo();
 
       const videos = items.map((i) => {
         const outlier = i.viewCount !== undefined ? detectOutlier(i.viewCount, viewCounts) : null;
-        recordSnapshotSafe(content, metricsRepo, provider.name, i);
+        recordSnapshotSafe(content, metricsRepo, provider.name, i, creatorId);
         return {
           title: i.title,
           url: i.url,
@@ -101,6 +104,7 @@ function recordSnapshotSafe(
     commentCount?: number;
     publishedAt?: string;
   },
+  creatorId: number | null,
 ): void {
   try {
     const hash = sourceHash({ type: "url", url: item.url });
@@ -110,6 +114,7 @@ function recordSnapshotSafe(
       url: item.url,
       canonicalUrl: canonicalizeUrl(item.url),
       contentHash: hash,
+      creatorId: creatorId ?? undefined,
       title: item.title,
       durationSec: item.durationSec,
       publishedAt: item.publishedAt,

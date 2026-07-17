@@ -1,5 +1,14 @@
 # Creator Research MCP
 
+## CleanCod3 Intelligence portable
+
+Para ejecutar el dashboard, n8n, bridge, MCP y SQLite juntos con Docker, consulta la
+[guía portable](docs/portable.md) y usa:
+
+```bash
+./cleancod3 start
+```
+
 [![CI](https://github.com/CleanCod3Systems/creator-research-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/CleanCod3Systems/creator-research-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 

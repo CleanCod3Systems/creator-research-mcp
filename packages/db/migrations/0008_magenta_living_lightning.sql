@@ -1,0 +1,1 @@
+ALTER TABLE `research_runs` ADD `result` text DEFAULT '{}' NOT NULL;

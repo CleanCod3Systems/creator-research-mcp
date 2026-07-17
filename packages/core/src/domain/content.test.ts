@@ -7,6 +7,12 @@ describe("canonicalizeUrl", () => {
       "https://youtube.com/watch?v=abc",
     );
   });
+
+  it("normalizes Instagram share links to one canonical content URL", () => {
+    expect(canonicalizeUrl("https://www.instagram.com/reel/ABC/?igsh=aTFnd2th&fbclid=123")).toBe(
+      "https://www.instagram.com/reel/ABC/",
+    );
+  });
 });
 
 describe("contentHash", () => {

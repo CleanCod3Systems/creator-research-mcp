@@ -113,4 +113,25 @@ describe("ProfileRepository", () => {
     });
     expect(id1).toBe(id2);
   });
+
+  it("upsertCreator: one creator can own profiles on multiple platforms", () => {
+    const db = makeDb();
+    const repo = new ProfileRepository(db);
+    const youtubeId = repo.upsertCreator({ platform: "youtube", handle: "KokiDure", name: "Koki Duré" });
+    const instagramId = repo.upsertCreator({ platform: "instagram", handle: "kokidure", name: "Koki Duré" });
+    expect(instagramId).toBe(youtubeId);
+    expect(repo.listCreators()).toHaveLength(1);
+    expect(repo.listCreators()[0]?.profiles).toHaveLength(2);
+  });
+
+  it("purgeCreator removes the creator and linked content", () => {
+    const db = makeDb();
+    const repo = new ProfileRepository(db);
+    const creatorId = repo.upsertCreator({ platform: "instagram", handle: "remove-me", name: "Remove Me" });
+    db.insert(contentItems).values({ creatorId, sourceType: "short", provider: "instagram", contentHash: "remove-hash", title: "test" }).run();
+    expect(repo.listContent(creatorId)).toHaveLength(1);
+    repo.purgeCreator(creatorId);
+    expect(repo.listCreators()).toHaveLength(0);
+    expect(repo.listContent(creatorId)).toHaveLength(0);
+  });
 });

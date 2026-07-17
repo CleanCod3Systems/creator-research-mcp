@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+COMPOSE=(docker compose --project-name cleancod3)
+
+ensure_env() {
+  if [[ ! -f .env ]]; then
+    cp .env.example .env
+    echo "Creado .env local. Las claves no se comparten."
+  fi
+  if command -v openssl >/dev/null 2>&1; then
+    grep -Eq '^MCP_AUTH_TOKEN=.+$' .env || printf '\nMCP_AUTH_TOKEN=%s\n' "$(openssl rand -hex 32)" >> .env
+    grep -Eq '^N8N_ENCRYPTION_KEY=.+$' .env || printf 'N8N_ENCRYPTION_KEY=%s\n' "$(openssl rand -hex 32)" >> .env
+  else
+    echo "Falta openssl: completa MCP_AUTH_TOKEN y N8N_ENCRYPTION_KEY en .env." >&2
+  fi
+  chmod 600 .env
+}
+
+case "${1:-}" in
+  start)
+    ensure_env
+    "${COMPOSE[@]}" up -d --build
+    echo "Dashboard: http://localhost:8080"
+    echo "n8n:       http://localhost:5678"
+    echo "MCP/API:   http://localhost:3333/mcp"
+    ;;
+  stop)
+    "${COMPOSE[@]}" stop
+    ;;
+  status)
+    "${COMPOSE[@]}" ps
+    ;;
+  backup)
+    ensure_env
+    mkdir -p backups
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    "${COMPOSE[@]}" stop creator-research >/dev/null
+    tar -czf "backups/cleancod3-${stamp}.tgz" data .env
+    "${COMPOSE[@]}" start creator-research >/dev/null
+    echo "Backup creado: backups/cleancod3-${stamp}.tgz"
+    echo "Incluye datos y configuración local; no lo publiques."
+    ;;
+  restore)
+    archive="${2:-}"
+    if [[ -z "$archive" || ! -f "$archive" ]]; then
+      echo "Uso: ./cleancod3 restore backups/cleancod3-YYYYMMDD-HHMMSS.tgz" >&2
+      exit 2
+    fi
+    "${COMPOSE[@]}" stop creator-research >/dev/null
+    tar -xzf "$archive"
+    echo "Backup restaurado. Ejecuta ./cleancod3 start para continuar."
+    ;;
+  reset)
+    if [[ "${2:-}" != "--yes" ]]; then
+      echo "Esto elimina los datos SQLite y el volumen local de n8n. Repite con: ./scripts/cleancod3 reset --yes" >&2
+      exit 2
+    fi
+    "${COMPOSE[@]}" down -v
+    find data -type f ! -name .gitkeep -delete 2>/dev/null || true
+    echo "Entorno reiniciado. .env se conserva."
+    ;;
+  *)
+    echo "Uso: ./cleancod3 {start|stop|status|backup|restore ARCHIVO|reset --yes}"
+    exit 2
+    ;;
+esac
